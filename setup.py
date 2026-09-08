@@ -19,6 +19,14 @@ OPTIONS = {
         'CFBundleVersion': "1.0.0",
         'CFBundleShortVersionString': "1.0.0",
         'NSHumanReadableCopyright': "Daniel",
+        # Lo marca Qt 6, que exige macOS 13.0 (el intérprete de python.org
+        # con el que se compila para distribuir admite desde macOS 11).
+        # Declararlo hace que un Mac más antiguo dé un aviso claro al
+        # instalar, en vez de dejar que la app se cierre sin explicación.
+        # IMPORTANTE: compilar el .dmg con el Python de python.org, no con
+        # el de Homebrew: ese solo funciona en la versión de macOS del
+        # equipo donde se compila (ver README).
+        'LSMinimumSystemVersion': "13.0",
     }
 }
 
