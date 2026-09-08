@@ -1,0 +1,18 @@
+# Dependencias de Digilogic Player.
+#
+# Instalación desde cero:
+#     python3 -m venv venv
+#     ./venv/bin/pip install -r requirements.txt
+#     ./venv/bin/python Digilogic.py
+
+# Toda la interfaz: ventana, audio (QMediaPlayer), dibujo y animaciones.
+PyQt6>=6.11.0
+
+# Lee las etiquetas y la portada incrustadas en los MP3. El reproductor
+# funciona sin ella (usa el nombre del archivo como título y muestra la
+# nota animada en vez de la portada), pero se pierden ambas cosas.
+mutagen>=1.48.1
+
+# Solo para empaquetar la app de macOS con "python setup.py py2app".
+# No hace falta para ejecutar Digilogic desde el código.
+py2app>=0.28.10
