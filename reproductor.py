@@ -837,7 +837,15 @@ class IconoLupa(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        pluma = QPen(QColor(255, 255, 255, 150), 1.5)
+
+        # Mismo fondo y misma intensidad que el interruptor de modo cuando
+        # está apagado: así la barra se ve exactamente igual en las dos
+        # versiones, y las capturas de la web sirven para ambas.
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(255, 255, 255, 20))
+        painter.drawEllipse(QRectF(0, 0, self.width(), self.height()))
+
+        pluma = QPen(QColor(255, 255, 255, 235), 1.5)
         pluma.setCapStyle(Qt.PenCapStyle.RoundCap)
         painter.setPen(pluma)
         painter.setBrush(Qt.BrushStyle.NoBrush)
