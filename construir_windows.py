@@ -16,7 +16,9 @@ Uso, en Windows:
     venv\\Scripts\\pip install pyinstaller
     venv\\Scripts\\python construir_windows.py
 
-El resultado queda en dist\\Digilogic\\Digilogic.exe
+El resultado queda en dist\\Digilogic.exe: un único archivo, sin carpeta
+ni nada que descomprimir. Es lo que se sube a la release de GitHub y lo
+que descarga la gente desde la web.
 """
 
 import os
@@ -56,6 +58,15 @@ def main():
         sys.executable, "-m", "PyInstaller",
         "--noconfirm",
         "--clean",
+        # Todo en un único .exe, en vez de una carpeta con el ejecutable
+        # y sus DLL al lado. Así se puede subir tal cual a la release y
+        # quien lo descarga no tiene que descomprimir nada.
+        #
+        # El precio es el arranque: un .exe de un solo archivo se
+        # descomprime en una carpeta temporal cada vez que se abre, así
+        # que tarda unos segundos más que la versión en carpeta. Merece
+        # la pena por lo mucho que simplifica la descarga.
+        "--onefile",
         # Sin consola: si no, Windows abriría una ventana negra detrás.
         "--windowed",
         "--name", NOMBRE,
@@ -72,7 +83,7 @@ def main():
     resultado = subprocess.run(orden)
 
     if resultado.returncode == 0:
-        print(f"\nListo: dist\\{NOMBRE}\\{NOMBRE}.exe")
+        print(f"\nListo: dist\\{NOMBRE}.exe")
     return resultado.returncode
 
 
