@@ -731,104 +731,6 @@ class BotonLista(QPushButton):
 # cada una terminando en una punta de flecha (estilo Spotify/iOS).
 # ------------------------------------------------------------------
 
-# ------------------------------------------------------------------
-# Botones de transporte: anterior, reproducir/pausar y siguiente.
-#
-# Los símbolos se dibujan a mano en vez de escribir los caracteres
-# "⏮ ▶ ⏸ ⏭" como texto. Cada sistema los representa con una fuente
-# distinta -Windows llega a pintarlos en color o como un recuadro vacío
-# si le falta la fuente-, así que dibujarlos garantiza que se vean
-# exactamente igual en todas partes y permite ajustar su grosor.
-# ------------------------------------------------------------------
-
-class BotonTransporte(QPushButton):
-    # Formas admitidas: "anterior", "play", "pausa", "siguiente".
-    def __init__(self, forma, tamano=36, color_icono=None, parent=None):
-        super().__init__(parent)
-        self.forma = forma
-        self.tamano = tamano
-        self.color_icono = color_icono or QColor(255, 255, 255, 240)
-        self.setFixedSize(tamano, tamano)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-
-    def establecer_forma(self, forma):
-        self.forma = forma
-        self.update()
-
-    def establecer_tamano(self, tamano):
-        self.tamano = tamano
-        self.setFixedSize(tamano, tamano)
-        self.update()
-
-    def paintEvent(self, event):
-        super().paintEvent(event)
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(self.color_icono)
-
-        w, h = self.width(), self.height()
-        cx, cy = w / 2, h / 2
-        # El icono ocupa algo menos de la mitad del botón: así respira
-        # dentro del círculo en vez de tocar los bordes.
-        u = min(w, h) * 0.22
-
-        if self.forma == "play":
-            # Triángulo ligeramente desplazado a la derecha: centrado
-            # geométricamente parece descentrado a la vista, porque el
-            # peso del triángulo está en su lado plano.
-            triangulo = QPainterPath()
-            triangulo.moveTo(cx - u * 0.55 + u * 0.18, cy - u)
-            triangulo.lineTo(cx + u + u * 0.18, cy)
-            triangulo.lineTo(cx - u * 0.55 + u * 0.18, cy + u)
-            triangulo.closeSubpath()
-            painter.drawPath(triangulo)
-            return
-
-        if self.forma == "pausa":
-            ancho_barra = u * 0.52
-            separacion = u * 0.42
-            for signo in (-1, 1):
-                x = cx + signo * separacion - ancho_barra / 2
-                painter.drawRoundedRect(
-                    QRectF(x, cy - u, ancho_barra, u * 2), ancho_barra * 0.3, ancho_barra * 0.3
-                )
-            return
-
-        # "anterior" y "siguiente": dos triángulos seguidos y una barrita
-        # al final, como en cualquier reproductor. Se construye siempre
-        # apuntando a la derecha y 'sentido' lo refleja para "anterior".
-        #
-        # Las posiciones van en unidades de 'u' sobre un eje que empieza en
-        # -1.0 (base del primer triángulo) y acaba en 1.28 (borde de la
-        # barra). Ese tramo no está centrado en 0, así que se compensa con
-        # 'ajuste' para que el icono quede centrado en el botón.
-        sentido = -1 if self.forma == "anterior" else 1
-        alto = u * 0.75
-        ajuste = -sentido * u * 0.14
-
-        def punto(posicion):
-            return cx + sentido * posicion * u + ajuste
-
-        for base, punta in ((-1.0, -0.05), (-0.05, 0.90)):
-            triangulo = QPainterPath()
-            triangulo.moveTo(punto(punta), cy)
-            triangulo.lineTo(punto(base), cy - alto)
-            triangulo.lineTo(punto(base), cy + alto)
-            triangulo.closeSubpath()
-            painter.drawPath(triangulo)
-
-        borde_interior = punto(1.02)
-        borde_exterior = punto(1.28)
-        painter.drawRoundedRect(
-            QRectF(
-                min(borde_interior, borde_exterior), cy - alto,
-                abs(borde_exterior - borde_interior), alto * 2,
-            ),
-            u * 0.09, u * 0.09,
-        )
-
-
 class BotonAleatorio(QPushButton):
     def __init__(self, tamano=30, parent=None):
         super().__init__(parent)
@@ -1765,19 +1667,16 @@ class Reproductor(QWidget):
         self.boton_lista.clicked.connect(self.alternar_lista)
         self.layout_controles.addWidget(self.boton_lista)
 
-        self.boton_anterior = BotonTransporte("anterior", tamano=36)
-        self._aplicar_estilo_icono(self.boton_anterior, 36)
+        self.boton_anterior = self.crear_boton_icono("⏮", tamano=36)
         self.boton_anterior.clicked.connect(self.anterior_cancion)
         self.layout_controles.addWidget(self.boton_anterior)
 
-        # El icono del play va en oscuro porque su botón es azul relleno.
-        self.boton_play = BotonTransporte("play", tamano=50, color_icono=QColor(255, 255, 255))
+        self.boton_play = QPushButton("▶")
         self._aplicar_estilo_play(50)
         self.boton_play.clicked.connect(self.play_pausa)
         self.layout_controles.addWidget(self.boton_play)
 
-        self.boton_siguiente = BotonTransporte("siguiente", tamano=36)
-        self._aplicar_estilo_icono(self.boton_siguiente, 36)
+        self.boton_siguiente = self.crear_boton_icono("⏭", tamano=36)
         self.boton_siguiente.clicked.connect(self.siguiente_cancion)
         self.layout_controles.addWidget(self.boton_siguiente)
 
@@ -1989,8 +1888,7 @@ class Reproductor(QWidget):
                 self.move(self._posicion_antes_compacto)
 
     def _aplicar_estilo_play(self, tamano):
-        # establecer_tamano ya fija el tamaño y repinta el icono dibujado.
-        self.boton_play.establecer_tamano(tamano)
+        self.boton_play.setFixedSize(tamano, tamano)
         self.boton_play.setStyleSheet(f"""
             QPushButton {{
                 background-color: {COLOR_ACENTO_CSS};
@@ -2003,10 +1901,7 @@ class Reproductor(QWidget):
         """)
 
     def _aplicar_estilo_icono(self, boton, tamano):
-        if isinstance(boton, BotonTransporte):
-            boton.establecer_tamano(tamano)
-        else:
-            boton.setFixedSize(tamano, tamano)
+        boton.setFixedSize(tamano, tamano)
         boton.setStyleSheet(f"""
             QPushButton {{
                 background-color: rgba(255,255,255,22);
@@ -2171,7 +2066,7 @@ class Reproductor(QWidget):
 
         if reproducir:
             self.player.play()
-            self.boton_play.establecer_forma("pausa")
+            self.boton_play.setText("⏸")
             self.portada.onda.establecer_activa(True)
             self.label_titulo.establecer_reproduciendo(True)
 
@@ -2230,12 +2125,12 @@ class Reproductor(QWidget):
             return
         if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
             self.player.pause()
-            self.boton_play.establecer_forma("play")
+            self.boton_play.setText("▶")
             self.portada.onda.establecer_activa(False)
             self.label_titulo.establecer_reproduciendo(False)
         else:
             self.player.play()
-            self.boton_play.establecer_forma("pausa")
+            self.boton_play.setText("⏸")
             self.portada.onda.establecer_activa(True)
             self.label_titulo.establecer_reproduciendo(True)
 
