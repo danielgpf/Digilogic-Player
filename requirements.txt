@@ -13,6 +13,12 @@ PyQt6>=6.11.0
 # nota animada en vez de la portada), pero se pierden ambas cosas.
 mutagen>=1.48.1
 
-# Solo para empaquetar la app de macOS con "python setup.py py2app".
-# No hace falta para ejecutar Digilogic desde el código.
-py2app>=0.28.10
+# Solo para empaquetar. No hacen falta para ejecutar Digilogic desde el
+# código, y cada una sirve para un sistema:
+#   - macOS:   python setup.py py2app
+#   - Windows: python construir_windows.py
+#
+# Van con marcador de plataforma: pip instalará únicamente la que
+# corresponda al sistema donde se ejecute.
+py2app>=0.28.10 ; sys_platform == "darwin"
+pyinstaller>=6.0 ; sys_platform == "win32"
