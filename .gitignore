@@ -4,3 +4,5 @@ dist/
 __pycache__/
 *.pyc
 .DS_Store
+# Lo genera PyInstaller en cada compilacion (construir_windows.py)
+Digilogic.spec
