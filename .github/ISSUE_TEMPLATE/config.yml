@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Preguntas y comentarios
+    url: https://github.com/danielgpf/Digilogic-Player/discussions
+    about: Para dudas, opiniones o simplemente contar cómo usas Digilogic.
+  - name: Web de Digilogic
+    url: https://digilogic-app.github.io/
+    about: Descargas para macOS y Windows.

@@ -1,0 +1,52 @@
+name: Reportar un fallo
+description: Algo no funciona como debería.
+title: "[Fallo] "
+labels: ["fallo"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por avisar. Cuanto más concreto seas, antes se arregla.
+
+  - type: dropdown
+    id: sistema
+    attributes:
+      label: Sistema
+      options:
+        - macOS
+        - Windows
+    validations:
+      required: true
+
+  - type: input
+    id: version_sistema
+    attributes:
+      label: Versión del sistema
+      placeholder: "Ej.: macOS 15.1 / Windows 11 24H2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: que_pasa
+    attributes:
+      label: Qué pasa
+      description: Describe el problema y, si puedes, pega una captura.
+      placeholder: "Al pulsar 'siguiente' con el modo aleatorio activado..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Cómo reproducirlo
+      placeholder: |
+        1. Abro Digilogic
+        2. Elijo una carpeta con...
+        3. Pulso...
+    validations:
+      required: true
+
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Qué esperabas que pasara
