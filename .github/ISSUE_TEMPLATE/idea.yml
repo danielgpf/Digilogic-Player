@@ -1,0 +1,34 @@
+name: Proponer una idea
+description: Algo que te gustaría que Digilogic hiciera.
+title: "[Idea] "
+labels: ["idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Digilogic quiere seguir siendo pequeño y sencillo, pero toda idea se lee y se agradece.
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: La idea
+      placeholder: "Me gustaría que..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: por_que
+    attributes:
+      label: Qué problema te resuelve
+      description: Cuéntame cómo usas Digilogic y qué te falta. Ayuda a entender la idea mejor que la propia idea.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: sistema
+    attributes:
+      label: Sistema que usas
+      multiple: true
+      options:
+        - macOS
+        - Windows
