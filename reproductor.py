@@ -689,6 +689,249 @@ class BotonSemaforo(QPushButton):
 
 
 # ------------------------------------------------------------------
+# Barra de título al estilo Windows: solo la "×" arriba a la derecha,
+# pegada al borde de la tarjeta como en cualquier ventana de Windows 11.
+# Ni franja de fondo ni nombre de la app: se probaron y rompían la
+# limpieza de la tarjeta; la cruz flota directamente sobre ella. En
+# macOS no existe: allí la tarjeta lleva el semáforo (BotonSemaforo) y
+# nada más. Sustituye a la fila superior de macOS, que solo servía para
+# alojar el semáforo.
+# ------------------------------------------------------------------
+
+ALTO_BARRA_TITULO_WINDOWS = 28
+# Hueco entre la barra de título y el panel de la nota. Es más justo que
+# el margen superior de macOS porque la propia barra ya hace de aire.
+SEPARACION_BARRA_TITULO_WINDOWS = 4
+
+
+class BotonCerrarWindows(QPushButton):
+    """La "×" de la barra de título. En reposo es solo la cruz; al pasar
+    el ratón se enciende el fondo rojo de Windows, recortado por la
+    esquina redondeada de la tarjeta igual que hace Windows 11 con sus
+    ventanas de esquinas curvas."""
+
+    # Rojo de Windows 11 (#E81123) y su versión apagada al mantener pulsado.
+    COLOR_HOVER = QColor(232, 17, 35)
+    COLOR_PULSADO = QColor(196, 43, 28)
+
+    def __init__(self, ancho, alto, radio_esquina, parent=None):
+        super().__init__(parent)
+        self.radio_esquina = radio_esquina
+        self._hover = False
+        self.setFixedSize(ancho, alto)
+        self.setCursor(Qt.CursorShape.ArrowCursor)
+        self.setStyleSheet("QPushButton { background: transparent; border: none; padding: 0px; }")
+
+    def enterEvent(self, event):
+        self._hover = True
+        self.update()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self._hover = False
+        self.update()
+        super().leaveEvent(event)
+
+    def _forma_fondo(self):
+        """Rectángulo cuya esquina superior derecha sigue la curva de la
+        tarjeta, un píxel por dentro para no pisar el borde."""
+        ancho, alto = self.width(), self.height()
+        # El borde de la tarjeta mide 1px, así que por dentro de él el
+        # radio efectivo es uno menos.
+        radio = self.radio_esquina - 1
+        ruta = QPainterPath()
+        ruta.moveTo(0, 1)
+        ruta.lineTo(ancho - 1 - radio, 1)
+        ruta.arcTo(QRectF(ancho - 1 - 2 * radio, 1, 2 * radio, 2 * radio), 90, -90)
+        ruta.lineTo(ancho - 1, alto)
+        ruta.lineTo(0, alto)
+        ruta.closeSubpath()
+        return ruta
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        ancho, alto = self.width(), self.height()
+
+        if self.isDown() or self._hover:
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(self.COLOR_PULSADO if self.isDown() else self.COLOR_HOVER)
+            painter.drawPath(self._forma_fondo())
+
+        # Con la ventana en segundo plano la cruz se atenúa, como hace
+        # Windows con los botones de una ventana inactiva.
+        if self._hover or self.window().isActiveWindow():
+            color_cruz = QColor(255, 255, 255, 235)
+        else:
+            color_cruz = QColor(255, 255, 255, 110)
+
+        pluma = QPen(color_cruz, 1.1)
+        pluma.setCapStyle(Qt.PenCapStyle.RoundCap)
+        painter.setPen(pluma)
+        # Cruz de 8 px, un poco menor que el glifo de Windows (10 px):
+        # la tarjeta es pequeña y a tamaño real dominaba la esquina. Va
+        # algo a la izquierda del centro porque la esquina redondeada se
+        # come la parte derecha del botón.
+        lado = 4
+        cx, cy = ancho / 2 - 3, alto / 2
+        painter.drawLine(QPointF(cx - lado, cy - lado), QPointF(cx + lado, cy + lado))
+        painter.drawLine(QPointF(cx + lado, cy - lado), QPointF(cx - lado, cy + lado))
+
+
+class BarraTituloWindows(QWidget):
+    ANCHO_BOTON_CERRAR = 44
+
+    def __init__(self, ancho, radio_esquina, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(ancho, ALTO_BARRA_TITULO_WINDOWS)
+
+        self.boton_cerrar = BotonCerrarWindows(
+            self.ANCHO_BOTON_CERRAR, ALTO_BARRA_TITULO_WINDOWS, radio_esquina, parent=self
+        )
+        self.boton_cerrar.move(ancho - self.ANCHO_BOTON_CERRAR, 0)
+
+        # No pinta nada ni captura el ratón: los clics y arrastres siguen
+        # hasta la ventana, que es quien mueve la tarjeta. Así la franja
+        # se puede arrastrar igual que la barra de cualquier ventana de
+        # Windows, aunque no se vea.
+
+
+# ------------------------------------------------------------------
+# Botones de transporte (anterior / play-pausa / siguiente).
+#
+# En macOS son los caracteres "⏮ ▶ ⏸ ⏭" de toda la vida: salen de la
+# fuente del sistema y se ven perfectamente. En Windows esos mismos
+# caracteres se convierten en emojis de color (cuadrados azules) que
+# rompen la interfaz, así que allí los símbolos se dibujan a mano con
+# QPainter. Las dos clases comparten la misma interfaz
+# ('establecer_simbolo') y el resto del reproductor no distingue cuál
+# tiene delante: 'crear_boton_control' elige según la plataforma.
+# ------------------------------------------------------------------
+
+SIMBOLOS_CONTROL = ("play", "pausa", "anterior", "siguiente")
+
+# Caracteres de cada símbolo, para la versión de texto (macOS).
+CARACTERES_CONTROL = {
+    "play": "▶",
+    "pausa": "⏸",
+    "anterior": "⏮",
+    "siguiente": "⏭",
+}
+
+
+def crear_boton_control(simbolo):
+    if sys.platform == "win32":
+        return BotonControlDibujado(simbolo)
+    return BotonControlTexto(simbolo)
+
+
+class BotonControlTexto(QPushButton):
+    """Versión de macOS: el símbolo es un carácter de texto."""
+
+    def __init__(self, simbolo, parent=None):
+        super().__init__(CARACTERES_CONTROL[simbolo], parent)
+
+    def establecer_simbolo(self, simbolo):
+        self.setText(CARACTERES_CONTROL[simbolo])
+
+
+class BotonControlDibujado(QPushButton):
+    """Versión de Windows: el símbolo se pinta con QPainter."""
+
+    def __init__(self, simbolo, parent=None):
+        super().__init__(parent)
+        self.simbolo = simbolo
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def establecer_simbolo(self, simbolo):
+        if simbolo not in SIMBOLOS_CONTROL:
+            raise ValueError(f"Símbolo desconocido: {simbolo}")
+        self.simbolo = simbolo
+        self.update()
+
+    def paintEvent(self, event):
+        # Primero el fondo redondo de la hoja de estilos, encima el símbolo.
+        super().paintEvent(event)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(255, 255, 255, 240))
+
+        w, h = self.width(), self.height()
+        cx, cy = w / 2, h / 2
+        # Tamaño del símbolo relativo al botón, para que escale entre el
+        # modo normal y el compacto sin tocar nada más.
+        lado = min(w, h) * 0.36
+
+        if self.simbolo == "play":
+            # El triángulo se desplaza un poco a la derecha: su centro
+            # geométrico no coincide con el óptico, y centrado a secas
+            # parece caído hacia la izquierda.
+            self._triangulo(painter, cx + lado * 0.1, cy, lado, hacia_derecha=True)
+        elif self.simbolo == "pausa":
+            grosor = lado * 0.32
+            hueco = lado * 0.22
+            for x in (cx - hueco - grosor, cx + hueco):
+                painter.drawRoundedRect(
+                    QRectF(x, cy - lado / 2, grosor, lado), grosor * 0.35, grosor * 0.35
+                )
+        else:
+            # "anterior" = barra + triángulo hacia la izquierda;
+            # "siguiente" = triángulo hacia la derecha + barra.
+            hacia_derecha = self.simbolo == "siguiente"
+            lado_tri = lado * 0.9
+            grosor_barra = lado * 0.22
+            # Desplazamiento del conjunto para que barra+triángulo queden
+            # centrados como un solo bloque.
+            ancho_total = lado_tri * 0.9 + grosor_barra + lado * 0.1
+            inicio = cx - ancho_total / 2
+            if hacia_derecha:
+                self._triangulo(
+                    painter, inicio + lado_tri * 0.45, cy, lado_tri, hacia_derecha=True
+                )
+                barra_x = inicio + ancho_total - grosor_barra
+            else:
+                barra_x = inicio
+                self._triangulo(
+                    painter,
+                    inicio + ancho_total - lado_tri * 0.45,
+                    cy,
+                    lado_tri,
+                    hacia_derecha=False,
+                )
+            painter.drawRoundedRect(
+                QRectF(barra_x, cy - lado_tri / 2, grosor_barra, lado_tri),
+                grosor_barra * 0.4,
+                grosor_barra * 0.4,
+            )
+
+    @staticmethod
+    def _triangulo(painter, cx, cy, lado, hacia_derecha):
+        """Triángulo equilátero-ish de altura 'lado' centrado en (cx, cy),
+        con la punta hacia la derecha o hacia la izquierda."""
+        media_altura = lado / 2
+        media_base = lado * 0.45
+        if hacia_derecha:
+            puntos = [
+                QPointF(cx - media_base, cy - media_altura),
+                QPointF(cx + media_base, cy),
+                QPointF(cx - media_base, cy + media_altura),
+            ]
+        else:
+            puntos = [
+                QPointF(cx + media_base, cy - media_altura),
+                QPointF(cx - media_base, cy),
+                QPointF(cx + media_base, cy + media_altura),
+            ]
+        ruta = QPainterPath()
+        ruta.moveTo(puntos[0])
+        ruta.lineTo(puntos[1])
+        ruta.lineTo(puntos[2])
+        ruta.closeSubpath()
+        painter.drawPath(ruta)
+
+
+# ------------------------------------------------------------------
 # Botón de lista: tres líneas horizontales dibujadas a mano y centradas
 # (el carácter "☰" de texto no queda bien centrado según la fuente).
 # ------------------------------------------------------------------
@@ -1346,6 +1589,15 @@ ANCHO_TARJETA = 300
 # reparte entre las filas y aparecen franjas vacías en vez de un diseño
 # compacto. Si añades o quitas filas, recalcula este número.
 ALTO_TARJETA = 369
+# Margen superior del layout y alto de la fila del semáforo en macOS. En
+# Windows esa fila la sustituye la barra de título, que ocupa unos
+# píxeles más: se suman a la tarjeta para que el resto no se apriete.
+MARGEN_SUPERIOR_MAC = 10
+ALTO_FILA_SEMAFORO = 14
+if sys.platform == "win32":
+    ALTO_TARJETA += (ALTO_BARRA_TITULO_WINDOWS + SEPARACION_BARRA_TITULO_WINDOWS) - (
+        MARGEN_SUPERIOR_MAC + ALTO_FILA_SEMAFORO + 5  # 5 = spacing del layout
+    )
 RADIO_ESQUINAS = 26
 ALTO_ZONA_SUPERIOR = 190
 # Los márgenes izquierdo/derecho del layout principal son 16px cada uno
@@ -1487,24 +1739,37 @@ class Reproductor(QWidget):
         self._aplicar_estilo_tarjeta(RADIO_ESQUINAS)
         self._aplicar_mascara_tarjeta(ANCHO_TARJETA, ALTO_TARJETA, RADIO_ESQUINAS)
 
-        # --- Barra superior: solo cerrar, a la izquierda (como en macOS) ---
-        self.barra_superior = QWidget()
-        # Sin alto fijo, esta fila reclamaba 31px para un botón de 14 y
-        # dejaba una franja vacía enorme sobre la nota. Se ata al alto
-        # exacto del botón para que no sobre ni un píxel.
-        self.barra_superior.setFixedHeight(14)
-        barra_superior = QHBoxLayout(self.barra_superior)
-        barra_superior.setContentsMargins(0, 0, 0, 0)
+        # --- Barra superior: en macOS, una fila con el semáforo a la
+        #     izquierda; en Windows, una barra de título pegada al borde
+        #     con el nombre y la "×" a la derecha. ---
+        if sys.platform == "win32":
+            # Va fuera del layout, a ras del borde superior de la
+            # tarjeta, como la barra de cualquier ventana del sistema.
+            self.barra_titulo = BarraTituloWindows(
+                ANCHO_TARJETA, RADIO_ESQUINAS, parent=self.tarjeta
+            )
+            self.barra_titulo.move(0, 0)
+            self.boton_cerrar = self.barra_titulo.boton_cerrar
+            self.boton_cerrar.clicked.connect(self.close)
+            self.barra_superior = None
+        else:
+            self.barra_titulo = None
+            self.barra_superior = QWidget()
+            # Sin alto fijo, esta fila reclamaba 31px para un botón de 14
+            # y dejaba una franja vacía enorme sobre la nota. Se ata al
+            # alto exacto del botón para que no sobre ni un píxel.
+            self.barra_superior.setFixedHeight(ALTO_FILA_SEMAFORO)
+            barra_superior = QHBoxLayout(self.barra_superior)
+            barra_superior.setContentsMargins(0, 0, 0, 0)
 
-        # Un punto por encima del semáforo real de macOS (12 px): a 16 se
-        # veía desproporcionado, pero a 12 clavados quedaba demasiado
-        # pequeño para esta tarjeta, que es bastante más estrecha que una
-        # ventana normal del sistema.
-        self.boton_cerrar = BotonSemaforo(color_hover=QColor(255, 95, 86), tamano=14)
-        self.boton_cerrar.clicked.connect(self.close)
-        barra_superior.addWidget(self.boton_cerrar)
-
-        barra_superior.addStretch()
+            # Un punto por encima del semáforo real de macOS (12 px): a 16
+            # se veía desproporcionado, pero a 12 clavados quedaba
+            # demasiado pequeño para esta tarjeta, que es bastante más
+            # estrecha que una ventana normal del sistema.
+            self.boton_cerrar = BotonSemaforo(color_hover=QColor(255, 95, 86), tamano=14)
+            self.boton_cerrar.clicked.connect(self.close)
+            barra_superior.addWidget(self.boton_cerrar)
+            barra_superior.addStretch()
 
         # --- Portada / lista (comparten el mismo hueco, se turnan) ---
         self.stack_superior = QStackedLayout()
@@ -1667,16 +1932,16 @@ class Reproductor(QWidget):
         self.boton_lista.clicked.connect(self.alternar_lista)
         self.layout_controles.addWidget(self.boton_lista)
 
-        self.boton_anterior = self.crear_boton_icono("⏮", tamano=36)
+        self.boton_anterior = self.crear_boton_icono("anterior", tamano=36)
         self.boton_anterior.clicked.connect(self.anterior_cancion)
         self.layout_controles.addWidget(self.boton_anterior)
 
-        self.boton_play = QPushButton("▶")
+        self.boton_play = crear_boton_control("play")
         self._aplicar_estilo_play(50)
         self.boton_play.clicked.connect(self.play_pausa)
         self.layout_controles.addWidget(self.boton_play)
 
-        self.boton_siguiente = self.crear_boton_icono("⏭", tamano=36)
+        self.boton_siguiente = self.crear_boton_icono("siguiente", tamano=36)
         self.boton_siguiente.clicked.connect(self.siguiente_cancion)
         self.layout_controles.addWidget(self.boton_siguiente)
 
@@ -1746,6 +2011,15 @@ class Reproductor(QWidget):
     def _aplicar_mascara_tarjeta(self, ancho, alto, radio):
         """Recorta la tarjeta con la forma redondeada exacta, así es
         imposible que asome ningún pico o esquina cuadrada."""
+        if sys.platform == "win32":
+            # Una máscara es una región de píxeles enteros: sin
+            # antialiasing. En Retina no se aprecia, pero en Windows a
+            # 100-150 % las esquinas salen con dientes de sierra. Como
+            # ningún hijo llega hasta las esquinas (todos quedan dentro
+            # del margen del layout), basta con el border-radius de la
+            # hoja de estilos, que sí se pinta suavizado.
+            self.tarjeta.clearMask()
+            return
         ruta_mascara = QPainterPath()
         ruta_mascara.addRoundedRect(QRectF(0, 0, ancho, alto), radio, radio)
         self.tarjeta.setMask(QRegion(ruta_mascara.toFillPolygon().toPolygon()))
@@ -1787,9 +2061,20 @@ class Reproductor(QWidget):
         self.slider_progreso.setFixedHeight(20)
 
         layout = QVBoxLayout(self.tarjeta)
-        layout.setContentsMargins(16, 10, 16, 14)
         layout.setSpacing(5)
-        layout.addWidget(self.barra_superior)
+        if sys.platform == "win32":
+            # La barra de título no entra en el layout: se reserva su
+            # alto en el margen superior y ella se queda pegada arriba.
+            layout.setContentsMargins(
+                16, ALTO_BARRA_TITULO_WINDOWS + SEPARACION_BARRA_TITULO_WINDOWS, 16, 14
+            )
+            self.barra_titulo.move(0, 0)
+            self.barra_titulo.show()
+            self.barra_titulo.raise_()
+        else:
+            layout.setContentsMargins(16, MARGEN_SUPERIOR_MAC, 16, 14)
+            layout.addWidget(self.barra_superior)
+            self.barra_superior.show()
         layout.addWidget(self.contenedor_superior)
         layout.addWidget(self.label_titulo)
         layout.addWidget(self.slider_progreso)
@@ -1797,7 +2082,6 @@ class Reproductor(QWidget):
         layout.addWidget(self.contenedor_controles)
 
         self.label_titulo.centrado = True
-        self.barra_superior.show()
         self.contenedor_superior.show()
         self.boton_lista.show()
         self.contenedor_aleatorio.show()
@@ -1842,7 +2126,12 @@ class Reproductor(QWidget):
         # A este tamaño no caben (ni hacen falta) la lista ni el aleatorio:
         # el título se lee mejor con el hueco entero para él.
         self.label_titulo.centrado = False
-        self.barra_superior.hide()
+        # En compacto no hay fila superior ni barra de título: se cierra
+        # volviendo al modo normal, en los dos sistemas.
+        if sys.platform == "win32":
+            self.barra_titulo.hide()
+        else:
+            self.barra_superior.hide()
         self.contenedor_superior.hide()
         self.boton_lista.hide()
         self.contenedor_aleatorio.hide()
@@ -1926,8 +2215,8 @@ class Reproductor(QWidget):
             QSlider::handle:horizontal {{ background: transparent; width: 0px; margin: 0; border: none; }}
         """)
 
-    def crear_boton_icono(self, texto, tamano=32):
-        boton = QPushButton(texto)
+    def crear_boton_icono(self, simbolo, tamano=32):
+        boton = crear_boton_control(simbolo)
         self._aplicar_estilo_icono(boton, tamano)
         return boton
 
@@ -2066,7 +2355,7 @@ class Reproductor(QWidget):
 
         if reproducir:
             self.player.play()
-            self.boton_play.setText("⏸")
+            self.boton_play.establecer_simbolo("pausa")
             self.portada.onda.establecer_activa(True)
             self.label_titulo.establecer_reproduciendo(True)
 
@@ -2125,12 +2414,12 @@ class Reproductor(QWidget):
             return
         if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
             self.player.pause()
-            self.boton_play.setText("▶")
+            self.boton_play.establecer_simbolo("play")
             self.portada.onda.establecer_activa(False)
             self.label_titulo.establecer_reproduciendo(False)
         else:
             self.player.play()
-            self.boton_play.setText("⏸")
+            self.boton_play.establecer_simbolo("pausa")
             self.portada.onda.establecer_activa(True)
             self.label_titulo.establecer_reproduciendo(True)
 
