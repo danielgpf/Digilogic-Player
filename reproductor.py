@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import (
     Qt, QUrl, QTimer, QRect, QRectF, QPointF, QSize, QEvent, QSettings,
-    pyqtSignal, QPropertyAnimation, QEasingCurve
+    pyqtSignal, QPropertyAnimation, QEasingCurve, QVariantAnimation
 )
 from PyQt6.QtGui import (
     QPixmap, QPainter, QPainterPath, QPainterPathStroker, QColor, QFont,
@@ -35,6 +35,29 @@ try:
     import mutagen
 except ImportError:
     mutagen = None
+
+# Integración con el centro multimedia de macOS. Es lo que hace que las
+# teclas de reproducción del teclado lleguen a Digilogic aunque la
+# ventana no tenga el foco, y que la canción aparezca en el Centro de
+# Control y en la pantalla bloqueada.
+#
+# Opcional a propósito, igual que mutagen: si pyobjc no está instalado
+# -o estamos en Windows- el reproductor funciona exactamente igual, solo
+# que sin esa integración.
+try:
+    from MediaPlayer import (
+        MPRemoteCommandCenter,
+        MPNowPlayingInfoCenter,
+        MPMediaItemPropertyTitle,
+        MPMediaItemPropertyArtist,
+        MPMediaItemPropertyPlaybackDuration,
+        MPNowPlayingInfoPropertyElapsedPlaybackTime,
+        MPNowPlayingInfoPropertyPlaybackRate,
+        MPNowPlayingPlaybackStatePlaying,
+        MPNowPlayingPlaybackStatePaused,
+    )
+except ImportError:
+    MPRemoteCommandCenter = None
 
 # Módulo opcional: si 'descargas.py' no está presente, el reproductor
 # funciona igual pero sin poder descargar de YouTube. La barra de arriba
@@ -1453,6 +1476,24 @@ class Portada(QWidget):
         self._hubo_arrastre = False
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
+        # --- Arrastrar una carpeta hasta aquí ---
+        # Dos animaciones independientes: el resalte mientras la carpeta
+        # sobrevuela la ventana, y el destello del momento de soltarla.
+        # Van por separado porque la primera tiene que poder quedarse
+        # quieta indefinidamente y la segunda se dispara y se va sola.
+        self._resalte = 0.0
+        self._destello = 0.0
+
+        self._anim_resalte = QVariantAnimation(self)
+        self._anim_resalte.setDuration(180)
+        self._anim_resalte.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self._anim_resalte.valueChanged.connect(self._al_cambiar_resalte)
+
+        self._anim_destello = QVariantAnimation(self)
+        self._anim_destello.setDuration(620)
+        self._anim_destello.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self._anim_destello.valueChanged.connect(self._al_cambiar_destello)
+
         self.onda = OndaAnimada(self)
         self.glow_nota = _GlowNota(self.onda, QPainterPath(), self)
         self.glow_nota.lower()
@@ -1488,6 +1529,81 @@ class Portada(QWidget):
 
     def limpiar_portada(self):
         self.pixmap_actual = None
+
+    # --- Soltar una carpeta encima ------------------------------------
+
+    def _al_cambiar_resalte(self, valor):
+        self._resalte = float(valor)
+        self.update()
+
+    def _al_cambiar_destello(self, valor):
+        self._destello = float(valor)
+        self.update()
+
+    def resaltar_arrastre(self, activo: bool):
+        """Enciende o apaga el marco de acento mientras hay una carpeta
+        sobrevolando la ventana."""
+        destino = 1.0 if activo else 0.0
+        if self._resalte == destino and self._anim_resalte.state() != QVariantAnimation.State.Running:
+            return
+        self._anim_resalte.stop()
+        self._anim_resalte.setStartValue(self._resalte)
+        self._anim_resalte.setEndValue(destino)
+        self._anim_resalte.start()
+
+    def celebrar_soltar(self):
+        """El acuse de recibo al soltar: un anillo que se abre desde el
+        centro y se desvanece. Dura poco a propósito; la gracia está en
+        que confirme el gesto, no en que se quede a mirar."""
+        self.resaltar_arrastre(False)
+        self._anim_destello.stop()
+        self._anim_destello.setStartValue(1.0)
+        self._anim_destello.setEndValue(0.0)
+        self._anim_destello.start()
+
+    def _pintar_arrastre(self, painter, ruta_redondeada):
+        """Marco y destello, ya recortados por la forma del panel."""
+        if self._resalte > 0.004:
+            painter.fillPath(
+                ruta_redondeada,
+                QColor(COLOR_ACENTO.red(), COLOR_ACENTO.green(), COLOR_ACENTO.blue(),
+                       int(30 * self._resalte)),
+            )
+            pluma = QPen(
+                QColor(COLOR_ACENTO.red(), COLOR_ACENTO.green(), COLOR_ACENTO.blue(),
+                       int(235 * self._resalte)),
+                2,
+            )
+            painter.setPen(pluma)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawRoundedRect(
+                QRectF(1, 1, self.width() - 2, self.height() - 2),
+                self.radio - 1, self.radio - 1,
+            )
+
+        if self._destello > 0.004:
+            # El valor va de 1 a 0, así que el avance del anillo es su
+            # complementario: empieza pequeño y opaco y acaba grande y
+            # transparente.
+            avance = 1.0 - self._destello
+            centro = QPointF(self.width() / 2, self.height() / 2)
+            radio = (max(self.width(), self.height()) * 0.75) * avance
+
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.setPen(QPen(
+                QColor(COLOR_ACENTO.red(), COLOR_ACENTO.green(), COLOR_ACENTO.blue(),
+                       int(210 * self._destello)),
+                3,
+            ))
+            painter.drawEllipse(centro, radio, radio)
+
+            # Un baño muy suave de acento que se va antes que el anillo,
+            # para que el panel entero acuse el golpe y no solo el borde.
+            painter.fillPath(
+                ruta_redondeada,
+                QColor(COLOR_ACENTO.red(), COLOR_ACENTO.green(), COLOR_ACENTO.blue(),
+                       int(42 * self._destello ** 2)),
+            )
 
     # --- Clic vs. arrastre -------------------------------------------
     # La portada ocupa buena parte de la ventana, así que tiene que seguir
@@ -1543,6 +1659,10 @@ class Portada(QWidget):
             painter.fillPath(ruta_redondeada, self.COLOR_FONDO_PANEL)
             self.glow_nota.show()
             self.onda.show()
+
+        # Siempre al final, para que el marco y el destello queden por
+        # encima tanto de la portada como de la nota animada.
+        self._pintar_arrastre(painter, ruta_redondeada)
 
 
 # ------------------------------------------------------------------
@@ -1664,6 +1784,105 @@ TEXTO_BUSCAR_LOCAL = "Buscar en tu música…"
 AJUSTES_ORGANIZACION = "Digilogic"
 AJUSTES_APLICACION = "Digilogic"
 CLAVE_CARPETA_MUSICA = "carpeta_musica"
+# Dónde se quedó la escucha la última vez. Al reabrir, la app vuelve a
+# esa canción y a ese minuto, pero en pausa: si se cerró sin querer no
+# se pierde el sitio, y si se cerró a propósito tampoco arranca sola
+# soltando música.
+CLAVE_ULTIMA_CANCION = "ultima_cancion"
+CLAVE_ULTIMA_POSICION = "ultima_posicion_ms"
+
+# Cada cuánto se anota en disco el minuto por el que va la canción.
+# Guardarlo en cada aviso de progreso serían unas diez escrituras por
+# segundo; cada cinco segundos es suficiente, porque lo peor que puede
+# pasar es reanudar cinco segundos antes de donde lo dejaste.
+INTERVALO_GUARDAR_POSICION_MS = 5_000
+
+
+# ------------------------------------------------------------------
+# Centro multimedia de macOS
+# ------------------------------------------------------------------
+
+class CentroMultimediaMac:
+    """Registra Digilogic en el centro multimedia del sistema.
+
+    Sirve para dos cosas. La primera es que las teclas de reproducción
+    del teclado (▶︎❙❙, ⏮, ⏭) lleguen a la app aunque la ventana esté
+    detrás de otra, que es justo el caso para el que existe el modo
+    miniatura. La segunda es que la canción aparezca en el Centro de
+    Control, en la pantalla bloqueada y en los AirPods, como cualquier
+    reproductor del sistema.
+
+    macOS solo entrega las teclas de medios a aplicaciones empaquetadas,
+    así que ejecutando 'python Digilogic.py' desde el código lo normal es
+    que no funcionen; dentro del .app sí.
+
+    Si algo falla al registrarse -otra versión de macOS, pyobjc a medias-
+    se desactiva en silencio: son teclas de más, no vale la pena que
+    tiren la aplicación por ellas.
+    """
+
+    # Lo que espera el sistema de vuelta de cada orden.
+    EXITO = 0
+
+    def __init__(self, reproductor):
+        self.reproductor = reproductor
+        self.activo = False
+        # Los manejadores hay que guardarlos: si Python los recolecta, el
+        # sistema se queda con punteros muertos y las teclas dejan de
+        # responder al rato de arrancar.
+        self._manejadores = []
+
+        if MPRemoteCommandCenter is None:
+            return
+
+        try:
+            self._registrar()
+            self.activo = True
+        except Exception:
+            self.activo = False
+
+    def _registrar(self):
+        centro = MPRemoteCommandCenter.sharedCommandCenter()
+
+        def conectar(orden, accion):
+            def manejador(evento):
+                accion()
+                return self.EXITO
+
+            self._manejadores.append(manejador)
+            orden.setEnabled_(True)
+            orden.addTargetWithHandler_(manejador)
+
+        r = self.reproductor
+        conectar(centro.togglePlayPauseCommand(), r.play_pausa)
+        conectar(centro.playCommand(), r.play_pausa)
+        conectar(centro.pauseCommand(), r.play_pausa)
+        conectar(centro.nextTrackCommand(), r.siguiente_cancion)
+        conectar(centro.previousTrackCommand(), r.anterior_cancion)
+
+    def actualizar(self, titulo, artista, duracion_ms, posicion_ms, sonando):
+        """Refresca lo que el sistema muestra como 'reproduciendo ahora'."""
+        if not self.activo:
+            return
+        try:
+            centro = MPNowPlayingInfoCenter.defaultCenter()
+            centro.setNowPlayingInfo_({
+                MPMediaItemPropertyTitle: titulo,
+                MPMediaItemPropertyArtist: artista or "",
+                MPMediaItemPropertyPlaybackDuration: duracion_ms / 1000.0,
+                MPNowPlayingInfoPropertyElapsedPlaybackTime: posicion_ms / 1000.0,
+                # A 0 el sistema entiende que está en pausa y congela el
+                # contador; a 1, que avanza a velocidad normal.
+                MPNowPlayingInfoPropertyPlaybackRate: 1.0 if sonando else 0.0,
+            })
+            centro.setPlaybackState_(
+                MPNowPlayingPlaybackStatePlaying if sonando
+                else MPNowPlayingPlaybackStatePaused
+            )
+        except Exception:
+            # Una actualización perdida no rompe nada: la siguiente
+            # canción o el siguiente play vuelven a intentarlo.
+            pass
 
 
 class Reproductor(QWidget):
@@ -1689,6 +1908,11 @@ class Reproductor(QWidget):
         self._arrastrando_slider = False
         self._posicion_click = None
         self.modo_compacto = False
+        # Minuto al que hay que saltar en cuanto el archivo esté cargado.
+        # No se puede pedir antes: hasta que el reproductor no tiene el
+        # medio listo, setPosition() se ignora sin avisar.
+        self._posicion_pendiente = None
+        self._ultima_posicion_guardada = 0
         # Dónde estaba la ventana antes de encogerse, para devolverla ahí
         # al salir del modo compacto.
         self._posicion_antes_compacto = None
@@ -1709,7 +1933,7 @@ class Reproductor(QWidget):
         self.player = QMediaPlayer()
         self.audio_output = QAudioOutput()
         self.player.setAudioOutput(self.audio_output)
-        self.player.mediaStatusChanged.connect(self.cuando_termina_cancion)
+        self.player.mediaStatusChanged.connect(self.al_cambiar_estado_medio)
         # El cambio de estado (sonando/pausado) puede llegar con un
         # pequeño retraso tras pedir play() en una canción recién
         # cargada -> nos enganchamos a la señal real en vez de
@@ -1721,7 +1945,19 @@ class Reproductor(QWidget):
 
         self.ajustes = QSettings(AJUSTES_ORGANIZACION, AJUSTES_APLICACION)
 
+        # Para que las teclas sueltas (espacio, flechas) lleguen a la
+        # ventana en vez de perderse. Los botones se quedan sin foco más
+        # abajo, en construir_interfaz.
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        # Soltar una carpeta encima elige esa carpeta.
+        self.setAcceptDrops(True)
+
         self.construir_interfaz()
+
+        # Teclas de medios del teclado y ficha de "reproduciendo ahora".
+        # Solo hace algo en macOS y con pyobjc instalado.
+        self.centro_multimedia = CentroMultimediaMac(self)
+
         self._restaurar_carpeta_guardada()
 
     # ---------------- Construcción visual ----------------
@@ -1737,7 +1973,7 @@ class Reproductor(QWidget):
         color_panel_css = f"rgb({color_panel.red()}, {color_panel.green()}, {color_panel.blue()})"
 
         self._aplicar_estilo_tarjeta(RADIO_ESQUINAS)
-        self._aplicar_mascara_tarjeta(ANCHO_TARJETA, ALTO_TARJETA, RADIO_ESQUINAS)
+        self._quitar_mascara_tarjeta()
 
         # --- Barra superior: en macOS, una fila con el semáforo a la
         #     izquierda; en Windows, una barra de título pegada al borde
@@ -1967,6 +2203,17 @@ class Reproductor(QWidget):
 
         self._montar_layout_normal()
 
+        # Ningún botón se queda el foco al pulsarlo. Si se lo quedara, la
+        # barra espaciadora volvería a activar ese botón -por ejemplo el
+        # de aleatorio- en vez de pausar la música. El campo de búsqueda
+        # sí conserva el suyo, que es donde el espacio debe escribirse.
+        #
+        # Va después de montar el layout: hasta entonces los botones
+        # cuelgan de contenedores todavía sueltos y 'findChildren' no los
+        # encuentra.
+        for boton in self.findChildren(QPushButton):
+            boton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+
     # ---------------- Montaje de los dos layouts ----------------
 
     def _aplicar_estilo_tarjeta(self, radio):
@@ -2008,21 +2255,21 @@ class Reproductor(QWidget):
             }}
         """)
 
-    def _aplicar_mascara_tarjeta(self, ancho, alto, radio):
-        """Recorta la tarjeta con la forma redondeada exacta, así es
-        imposible que asome ningún pico o esquina cuadrada."""
-        if sys.platform == "win32":
-            # Una máscara es una región de píxeles enteros: sin
-            # antialiasing. En Retina no se aprecia, pero en Windows a
-            # 100-150 % las esquinas salen con dientes de sierra. Como
-            # ningún hijo llega hasta las esquinas (todos quedan dentro
-            # del margen del layout), basta con el border-radius de la
-            # hoja de estilos, que sí se pinta suavizado.
-            self.tarjeta.clearMask()
-            return
-        ruta_mascara = QPainterPath()
-        ruta_mascara.addRoundedRect(QRectF(0, 0, ancho, alto), radio, radio)
-        self.tarjeta.setMask(QRegion(ruta_mascara.toFillPolygon().toPolygon()))
+    def _quitar_mascara_tarjeta(self):
+        """La tarjeta no lleva máscara: su forma redondeada la pinta el
+        'border-radius' de la hoja de estilos, que sí sale suavizado.
+
+        Antes se recortaba con setMask(). Una máscara es una QRegion, es
+        decir, píxeles enteros: o dentro o fuera, sin medias tintas. Eso
+        deja las esquinas con dientes de sierra, muy marcados en Windows
+        y sutiles pero visibles también en Retina, porque el escalón
+        mide un punto lógico (dos píxeles físicos).
+
+        Y no hace falta recortar nada: los hijos quedan todos dentro de
+        los márgenes del layout, así que ninguno llega a asomar por las
+        esquinas.
+        """
+        self.tarjeta.clearMask()
 
     def _vaciar_layout(self, layout):
         """Saca todos los widgets de un layout (incluidos los que estén en
@@ -2161,7 +2408,7 @@ class Reproductor(QWidget):
         self.setFixedSize(ancho, alto)
         self.tarjeta.setFixedSize(ancho, alto)
         self.tarjeta.move(0, 0)
-        self._aplicar_mascara_tarjeta(ancho, alto, radio)
+        self._quitar_mascara_tarjeta()
         self._aplicar_estilo_tarjeta(radio)
 
         if self.modo_compacto:
@@ -2256,14 +2503,126 @@ class Reproductor(QWidget):
 
     # ---------------- Lógica del reproductor ----------------
 
+    # ---------------- Teclado ----------------
+
+    # Teclas de reproducción del teclado. Windows las entrega a la app
+    # directamente; en macOS las intercepta el sistema y llegan por el
+    # centro multimedia (CentroMultimediaMac), no por aquí.
+    TECLAS_PLAY_PAUSA = (
+        Qt.Key.Key_MediaTogglePlayPause,
+        Qt.Key.Key_MediaPlay,
+        Qt.Key.Key_MediaPause,
+    )
+
+    def keyPressEvent(self, event):
+        """Atajos de la ventana.
+
+        Solo llegan aquí las teclas que ningún hijo con el foco se haya
+        quedado antes: mientras se escribe en el buscador, el espacio y
+        las flechas son suyos y esto ni se entera.
+        """
+        tecla = event.key()
+
+        if tecla == Qt.Key.Key_Space or tecla in self.TECLAS_PLAY_PAUSA:
+            self.play_pausa()
+        elif tecla in (Qt.Key.Key_Left, Qt.Key.Key_MediaPrevious):
+            self.anterior_cancion()
+        elif tecla in (Qt.Key.Key_Right, Qt.Key.Key_MediaNext):
+            self.siguiente_cancion()
+        else:
+            super().keyPressEvent(event)
+            return
+
+        event.accept()
+
+    # ---------------- Arrastrar una carpeta hasta la ventana ----------
+
+    @staticmethod
+    def _destino_arrastrado(datos):
+        """Traduce lo que se está arrastrando a (carpeta, canción).
+
+        Acepta una carpeta -se abre entera- y también un MP3 suelto, en
+        cuyo caso se abre la carpeta que lo contiene y se deja esa
+        canción seleccionada, que es lo que espera quien arrastra un
+        archivo concreto. Cualquier otra cosa se rechaza.
+        """
+        if not datos.hasUrls():
+            return None, None
+
+        for url in datos.urls():
+            if not url.isLocalFile():
+                continue
+            ruta = url.toLocalFile()
+            if os.path.isdir(ruta):
+                return ruta, None
+            if ruta.lower().endswith(".mp3"):
+                return os.path.dirname(ruta), ruta
+
+        return None, None
+
+    def dragEnterEvent(self, event):
+        carpeta, _ = self._destino_arrastrado(event.mimeData())
+        if carpeta is None:
+            event.ignore()
+            return
+        event.acceptProposedAction()
+        self.portada.resaltar_arrastre(True)
+
+    def dragMoveEvent(self, event):
+        # Sin esto, algunos gestores de archivos retiran la aceptación a
+        # mitad del gesto y el cursor pasa a "prohibido" sin soltar nada.
+        carpeta, _ = self._destino_arrastrado(event.mimeData())
+        event.acceptProposedAction() if carpeta else event.ignore()
+
+    def dragLeaveEvent(self, event):
+        self.portada.resaltar_arrastre(False)
+        event.accept()
+
+    def dropEvent(self, event):
+        carpeta, cancion = self._destino_arrastrado(event.mimeData())
+        if carpeta is None:
+            event.ignore()
+            return
+
+        event.acceptProposedAction()
+        self.portada.celebrar_soltar()
+
+        # Si venía una posición guardada de la sesión anterior, ya no
+        # vale: estamos abriendo otra carpeta a mano.
+        self._posicion_pendiente = None
+        self._cargar_mp3_de_carpeta(carpeta, seleccionar_ruta=cancion)
+
+        # Si se arrastró un MP3 concreto, suena; si fue la carpeta
+        # entera, se queda esperando a que se le dé al play.
+        if cancion and cancion in self.canciones:
+            self.play_pausa()
+
     def _restaurar_carpeta_guardada(self):
         """Al abrir, vuelve a cargar la última carpeta que se usó, para no
         tener que elegirla cada vez. Si ya no existe -un USB desconectado,
         una carpeta movida o borrada- se ignora sin avisar y la app se
         queda como recién instalada, pidiendo que elijas una."""
         carpeta = self.ajustes.value(CLAVE_CARPETA_MUSICA, "", type=str)
-        if carpeta and os.path.isdir(carpeta):
-            self._cargar_mp3_de_carpeta(carpeta)
+        if not (carpeta and os.path.isdir(carpeta)):
+            return
+
+        # Hay que leer las dos claves ANTES de cargar la carpeta: cargarla
+        # reproduce una canción y eso reescribe los ajustes.
+        cancion = self.ajustes.value(CLAVE_ULTIMA_CANCION, "", type=str)
+        posicion = self.ajustes.value(CLAVE_ULTIMA_POSICION, 0, type=int)
+
+        if cancion and not os.path.isfile(cancion):
+            cancion = ""
+
+        self._cargar_mp3_de_carpeta(carpeta, seleccionar_ruta=cancion or None)
+
+        # El salto al minuto se aplaza: hasta que el archivo no está
+        # cargado del todo, setPosition() no tiene efecto. Lo hace
+        # 'al_cambiar_estado_medio' en cuanto el medio está listo.
+        if cancion and posicion > 0 and self.canciones and \
+                0 <= self.indice_actual < len(self.canciones) and \
+                self.canciones[self.indice_actual] == cancion:
+            self._posicion_pendiente = posicion
 
     def elegir_carpeta(self):
         carpeta = QFileDialog.getExistingDirectory(
@@ -2353,6 +2712,9 @@ class Reproductor(QWidget):
 
         self.lista_canciones.setCurrentRow(indice)
 
+        # Canción nueva: el punto de escucha vuelve al principio.
+        self._guardar_punto_escucha(0)
+
         if reproducir:
             self.player.play()
             self.boton_play.establecer_simbolo("pausa")
@@ -2360,6 +2722,7 @@ class Reproductor(QWidget):
             self.label_titulo.establecer_reproduciendo(True)
 
         self._actualizar_indicadores_ecualizador()
+        self._refrescar_centro_multimedia()
 
     def _al_cambiar_texto_campo_busqueda(self, texto):
         """Lo que escribes filtra en vivo la lista de canciones que ya
@@ -2424,6 +2787,7 @@ class Reproductor(QWidget):
             self.label_titulo.establecer_reproduciendo(True)
 
         self._actualizar_indicadores_ecualizador()
+        self._refrescar_centro_multimedia()
 
     def alternar_aleatorio(self):
         self.aleatorio_activado = not self.aleatorio_activado
@@ -2471,9 +2835,57 @@ class Reproductor(QWidget):
         self.indice_actual = nuevo_indice
         self.cargar_cancion(self.indice_actual)
 
-    def cuando_termina_cancion(self, estado):
+    def al_cambiar_estado_medio(self, estado):
+        """Único sitio enganchado a 'mediaStatusChanged'. Hace dos cosas:
+        encadenar con la siguiente canción cuando una termina, y aplicar
+        el salto al minuto guardado en cuanto el archivo está listo."""
         if estado == QMediaPlayer.MediaStatus.EndOfMedia:
             self.siguiente_cancion()
+            return
+
+        if self._posicion_pendiente is not None and estado in (
+            QMediaPlayer.MediaStatus.LoadedMedia,
+            QMediaPlayer.MediaStatus.BufferedMedia,
+        ):
+            posicion = self._posicion_pendiente
+            self._posicion_pendiente = None
+            # Nunca justo al final: reanudar en el último segundo haría
+            # saltar de inmediato a la siguiente canción.
+            if 0 < posicion < max(0, self.player.duration() - 1500):
+                self.player.setPosition(posicion)
+
+    # ---------------- Dónde se quedó la escucha ----------------
+
+    def _guardar_punto_escucha(self, posicion_ms=None):
+        """Anota canción y minuto para la próxima vez que se abra."""
+        if not (self.canciones and 0 <= self.indice_actual < len(self.canciones)):
+            return
+        if posicion_ms is None:
+            posicion_ms = self.player.position()
+        self.ajustes.setValue(CLAVE_ULTIMA_CANCION, self.canciones[self.indice_actual])
+        self.ajustes.setValue(CLAVE_ULTIMA_POSICION, int(posicion_ms))
+        self._ultima_posicion_guardada = posicion_ms
+
+    def closeEvent(self, event):
+        """Al cerrar se anota el punto exacto, sin esperar al temporizador
+        de los cinco segundos. Es el caso que de verdad importa: cerrar
+        sin querer y volver justo donde estabas."""
+        self._guardar_punto_escucha()
+        super().closeEvent(event)
+
+    def _refrescar_centro_multimedia(self):
+        """Le cuenta al sistema qué está sonando, para el Centro de
+        Control y la pantalla bloqueada."""
+        if not (self.canciones and 0 <= self.indice_actual < len(self.canciones)):
+            return
+        titulo, artista = extraer_metadatos(self.canciones[self.indice_actual])
+        self.centro_multimedia.actualizar(
+            titulo,
+            artista,
+            self.player.duration(),
+            self.player.position(),
+            self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState,
+        )
 
     # ---------------- Barra de progreso ----------------
 
@@ -2489,9 +2901,16 @@ class Reproductor(QWidget):
             self.slider_progreso.setValue(posicion)
         self.label_tiempo_actual.setText(formatear_tiempo(posicion))
 
+        # De vez en cuando, no en cada aviso: llegan unos diez por segundo.
+        if abs(posicion - self._ultima_posicion_guardada) >= INTERVALO_GUARDAR_POSICION_MS:
+            self._guardar_punto_escucha(posicion)
+
     def actualizar_duracion(self, duracion):
         self.slider_progreso.setRange(0, duracion)
         self.label_tiempo_total.setText(formatear_tiempo(duracion))
+        # La duración llega cuando el archivo ya está leído, que es el
+        # primer momento en que la ficha del sistema puede estar completa.
+        self._refrescar_centro_multimedia()
 
 
 if __name__ == "__main__":

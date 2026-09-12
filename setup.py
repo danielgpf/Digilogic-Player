@@ -7,6 +7,11 @@ APP = ['Digilogic.py']
 OPTIONS = {
     'argv_emulation': False,
     'packages': ['PyQt6'],
+    # MediaPlayer y objc se importan dentro de un try/except, y py2app no
+    # siempre sigue esas ramas. Sin nombrarlos aquí el .app se compila sin
+    # ellos y, ya empaquetado, se pierden las teclas de reproducción del
+    # teclado y la ficha del Centro de Control.
+    'includes': ['objc', 'Foundation', 'MediaPlayer'],
     # Todo lo que 'ruta_recurso' busque en tiempo de ejecución tiene que
     # estar aquí, o dentro del .app el icono no se encontraría.
     'resources': ['Nota-musica.svg', 'icono aleatorio.png'],
@@ -16,8 +21,8 @@ OPTIONS = {
         'CFBundleDisplayName': 'Digilogic',
         'CFBundleGetInfoString': "Reproductor MP3 Digilogic",
         'CFBundleIdentifier': "com.daniel.digilogic",
-        'CFBundleVersion': "1.0.0",
-        'CFBundleShortVersionString': "1.0.0",
+        'CFBundleVersion': "1.0.1",
+        'CFBundleShortVersionString': "1.0.1",
         'NSHumanReadableCopyright': "Daniel",
         # Lo marca Qt 6, que exige macOS 13.0 (el intérprete de python.org
         # con el que se compila para distribuir admite desde macOS 11).
