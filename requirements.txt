@@ -13,6 +13,16 @@ PyQt6>=6.11.0
 # nota animada en vez de la portada), pero se pierden ambas cosas.
 mutagen>=1.48.1
 
+# Integración con el centro multimedia de macOS: hace que las teclas de
+# reproducción del teclado lleguen a Digilogic aunque la ventana esté
+# detrás, y que la canción salga en el Centro de Control, en la pantalla
+# bloqueada y en los AirPods.
+#
+# Opcional de verdad: el reproductor arranca y funciona igual sin ella,
+# solo pierde eso. Va con marcador de plataforma porque en Windows no
+# existe ni hace falta.
+pyobjc-framework-MediaPlayer>=10.0 ; sys_platform == "darwin"
+
 # Solo para empaquetar. No hacen falta para ejecutar Digilogic desde el
 # código, y cada una sirve para un sistema:
 #   - macOS:   python setup.py py2app
