@@ -13,6 +13,18 @@ musical.
 Reproduce los MP3 directamente desde la carpeta que le indiques —puede ser
 un USB— sin copiarlos ni importarlos a ningún sitio.
 
+<p align="center">
+  <img src="docs/reproductor.png" width="270" alt="Digilogic reproduciendo una canción, con la nota musical animada">
+  <img src="docs/lista.png" width="270" alt="La lista completa de canciones con su buscador">
+  <img src="docs/buscador.png" width="270" alt="El buscador filtrando la lista mientras se escribe">
+</p>
+
+<p align="center">
+  <img src="docs/modo-compacto.png" width="430" alt="El modo compacto: una barra horizontal con la portada, el título y los controles">
+  <br>
+  <sub>Pulsa la nota y la ventana se encoge a esto, en una esquina de la pantalla.</sub>
+</p>
+
 **Web:** https://digilogic-app.github.io/
 
 ## Descargar
