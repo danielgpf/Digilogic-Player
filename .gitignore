@@ -1,4 +1,8 @@
 venv/
+# Entorno con el que se compila el .dmg para distribuir. Usa el Python
+# universal de python.org, no el de Homebrew: el de Homebrew produce un
+# .app que solo abre en la version de macOS del equipo donde se compilo.
+venv-build/
 build/
 dist/
 __pycache__/
