@@ -1,93 +1,106 @@
 # Digilogic Player
 
-[![Descargas](https://img.shields.io/github/downloads/danielgpf/Digilogic-Player/total?label=descargas&color=4F8CFF)](https://github.com/danielgpf/Digilogic-Player/releases)
-[![Última versión](https://img.shields.io/github/v/release/danielgpf/Digilogic-Player?label=versi%C3%B3n&color=4F8CFF)](https://github.com/danielgpf/Digilogic-Player/releases/latest)
-[![Licencia](https://img.shields.io/badge/licencia-MIT-lightgrey)](LICENSE)
-[![Ko-fi](https://img.shields.io/badge/Ko--fi-ap%C3%B3yame-ff5f5f?logo=ko-fi&logoColor=white)](https://ko-fi.com/daniel_digilogic)
+[![Downloads](https://img.shields.io/github/downloads/danielgpf/Digilogic-Player/total?label=downloads&color=4F8CFF)](https://github.com/danielgpf/Digilogic-Player/releases)
+[![Latest release](https://img.shields.io/github/v/release/danielgpf/Digilogic-Player?label=version&color=4F8CFF)](https://github.com/danielgpf/Digilogic-Player/releases/latest)
+[![Licence](https://img.shields.io/badge/licence-MIT-lightgrey)](LICENSE)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-support%20me-ff5f5f?logo=ko-fi&logoColor=white)](https://ko-fi.com/daniel_digilogic)
 
-Reproductor de MP3 para macOS y Windows, escrito en Python con PyQt6.
-Ventana sin bordes, esquinas redondeadas de verdad y un visualizador
-animado inspirado en el orbe de Siri que se dibuja dentro de una nota
-musical.
+A minimal MP3 player for macOS and Windows, written in Python with PyQt6.
+Frameless window, properly rounded corners, and an animated visualiser
+inspired by the Siri orb, drawn inside a musical note.
 
-Reproduce los MP3 directamente desde la carpeta que le indiques —puede ser
-un USB— sin copiarlos ni importarlos a ningún sitio.
+It plays MP3s straight from whichever folder you point it at — a USB drive
+works too — without copying or importing anything anywhere.
 
 <p align="center">
-  <img src="docs/reproductor.png" width="270" alt="Digilogic reproduciendo una canción, con la nota musical animada">
-  <img src="docs/lista.png" width="270" alt="La lista completa de canciones con su buscador">
-  <img src="docs/buscador.png" width="270" alt="El buscador filtrando la lista mientras se escribe">
+  <img src="docs/reproductor.png" width="270" alt="Digilogic playing a track, with the animated musical note">
+  <img src="docs/lista.png" width="270" alt="The full track list with its search box">
+  <img src="docs/buscador.png" width="270" alt="The search box filtering the list as you type">
 </p>
 
 <p align="center">
-  <img src="docs/modo-compacto.png" width="430" alt="El modo compacto: una barra horizontal con la portada, el título y los controles">
+  <img src="docs/modo-compacto.png" width="430" alt="Mini mode: a horizontal bar with the artwork, the title and the controls">
   <br>
-  <sub>Pulsa la nota y la ventana se encoge a esto, en una esquina de la pantalla.</sub>
+  <sub>Click the note and the window shrinks to this, in a corner of the screen.</sub>
 </p>
 
-**Web:** https://digilogic-app.github.io/
+**Website:** https://digilogic-app.github.io/
 
-## Descargar
+## Download
 
-| Sistema | Descarga |
+| System | Download |
 |---|---|
-| macOS (Apple Silicon, macOS 13 o superior) | [Digilogic.dmg](https://github.com/danielgpf/Digilogic-Player/releases/latest/download/Digilogic.dmg) |
-| Windows 10 u 11 (64 bits) | [Digilogic.exe](https://github.com/danielgpf/Digilogic-Player/releases/latest/download/Digilogic.exe) |
+| macOS (Apple Silicon, macOS 13 or later) | [Digilogic.dmg](https://github.com/danielgpf/Digilogic-Player/releases/latest/download/Digilogic.dmg) |
+| Windows 10 or 11 (64-bit) | [Digilogic.exe](https://github.com/danielgpf/Digilogic-Player/releases/latest/download/Digilogic.exe) |
 
-La app no está firmada (la firma de Apple cuesta 99 €/año y la de
-Microsoft ronda los 200 €), así que la primera vez cada sistema muestra un
-aviso. En macOS: clic derecho → Abrir. En Windows: *Más información* →
-*Ejecutar de todas formas*. Solo hace falta una vez. Más detalles en las
-[notas de la versión](https://github.com/danielgpf/Digilogic-Player/releases/latest).
+The app isn't code-signed — an Apple signature costs €99 a year and a
+Microsoft one is around €200 — so both systems warn you the first time. On
+macOS: right-click → Open. On Windows: *More info* → *Run anyway*. Only
+needed once. There's more detail in the
+[release notes](https://github.com/danielgpf/Digilogic-Player/releases/latest).
 
-## Qué hace
+## What it does
 
-- **Lee tu carpeta de música** y muestra la portada incrustada en cada MP3.
-  Si la canción no tiene portada, dibuja una nota musical con lóbulos de
-  color que giran y se funden entre sí en mezcla aditiva.
-- **Modo compacto**: al pulsar la nota, la ventana se encoge a una tarjeta
-  horizontal y se coloca en la esquina superior izquierda de la pantalla,
-  para dejarla de fondo mientras trabajas. Se vuelve pulsando de nuevo.
-- **Buscador** de la música que ya tienes, que filtra la lista mientras
-  escribes.
-- **Reproducción aleatoria con historial real**: al pulsar "anterior"
-  vuelve a la canción que sonó de verdad, no a otra al azar.
-- **"Anterior" con umbral**: si la canción lleva más de 10 segundos
-  sonando, la rebobina al principio en vez de saltar a la anterior, como
-  hacen Spotify o Apple Music.
-- **Recuerda la carpeta** entre sesiones, así que solo hay que elegirla
-  una vez.
-- **Se integra con cada sistema**: en macOS, el semáforo de cerrar se
-  apaga a gris cuando la ventana pierde el foco y los iconos se dibujan a
-  la resolución real de las pantallas Retina; en Windows, botón de cerrar
-  al estilo de Windows 11 e icono de la app en la barra de tareas.
+- **Reads your music folder** and shows the album art embedded in each MP3.
+  When a track has none, it draws a musical note with coloured lobes that
+  rotate and blend into each other in additive mixing.
+- **Mini mode**: click the note and the window shrinks to a horizontal card
+  in the corner of the screen, so you can leave it playing while you work.
+  Click again to bring it back.
+- **Drag a folder onto the window** to open it. Dropping a single MP3 opens
+  its folder and starts that track.
+- **Resumes where you left off**: the track and the exact second are saved
+  when you close it, and restored — paused — when you open it again.
+- **Media keys work while the window is in the background**, and on macOS
+  the track shows up in Control Centre, on the lock screen and on AirPods.
+- **Search** through the music you already have, filtering as you type.
+- **Shuffle with real history**: pressing "previous" goes back to the track
+  that actually played, not to another random one.
+- **"Previous" with a threshold**: if the track has been playing for more
+  than 10 seconds it rewinds to the start instead of skipping back, the way
+  Spotify and Apple Music do it.
+- **Follows your system language**, in 14 of them. No language menu: it
+  asks the system on startup and picks.
+- **Fits into each system**: on macOS the close button fades to grey when
+  the window loses focus and the icons are drawn at the real resolution of
+  Retina displays; on Windows there's a Windows 11 style close button and a
+  proper taskbar icon.
 
-## Fallos, ideas y comentarios
+## Keyboard
 
-- ¿Algo no funciona? [Reporta un fallo](https://github.com/danielgpf/Digilogic-Player/issues/new?template=fallo.yml).
-- ¿Te falta algo? [Propón una idea](https://github.com/danielgpf/Digilogic-Player/issues/new?template=idea.yml).
-- Para dudas, opiniones o contar cómo lo usas: [Discussions](https://github.com/danielgpf/Digilogic-Player/discussions).
+| Key | Action |
+|---|---|
+| <kbd>Space</kbd> | Play / pause |
+| <kbd>←</kbd> | Previous track (or restart the current one) |
+| <kbd>→</kbd> | Next track |
+| Media keys | Play, pause, previous, next — even from the background |
 
-Toda idea se lee. Digilogic quiere seguir siendo pequeño y sencillo, así
-que no todo entrará, pero lo que entra se anuncia en las notas de cada
-versión con el nombre de quien lo propuso.
+## Bugs, ideas and comments
 
-## Apoyar el proyecto
+- Something not working? [Report a bug](https://github.com/danielgpf/Digilogic-Player/issues/new?template=fallo.yml).
+- Something missing? [Suggest an idea](https://github.com/danielgpf/Digilogic-Player/issues/new?template=idea.yml).
+- For questions, opinions, or just to say how you use it: [Discussions](https://github.com/danielgpf/Digilogic-Player/discussions).
 
-Digilogic es gratis y de código abierto, y lo seguirá siendo. Si te
-resulta útil, puedes [invitarme a un café en Ko-fi](https://ko-fi.com/daniel_digilogic).
-Lo recaudado va a estos objetivos, por orden:
+Every idea gets read. Digilogic wants to stay small and simple, so not
+everything will make it in — but whatever does is credited in the release
+notes to whoever suggested it.
 
-| Objetivo | Coste | Qué consigue |
+## Supporting the project
+
+Digilogic is free and open source, and it will stay that way. If you find
+it useful, you can [buy me a coffee on Ko-fi](https://ko-fi.com/daniel_digilogic).
+What comes in goes to these goals, in order:
+
+| Goal | Cost | What it unlocks |
 |---|---|---|
-| Microsoft Store | 19 $ (una vez) | Instalar en Windows sin el aviso de SmartScreen |
-| Firma de código en Windows | ~10 $/mes | Que el `.exe` descargado de la web abra sin avisos |
-| Apple Developer | 99 $/año | Que la app de Mac abra sin avisos y, más adelante, versión para iPhone |
-| Google Play | 25 $ (una vez) | Versión para Android |
+| Microsoft Store | $19 (one-off) | Installing on Windows without the SmartScreen warning |
+| Windows code signing | ~$10/month | The `.exe` downloaded from the site opening with no warnings |
+| Apple Developer | $99/year | The Mac app opening with no warnings and, later on, an iPhone version |
+| Google Play | $25 (one-off) | An Android version |
 
-## Ejecutar desde el código
+## Running from source
 
-Hace falta Python 3.
+You need Python 3.
 
 ```bash
 git clone https://github.com/danielgpf/Digilogic-Player.git
@@ -97,40 +110,42 @@ python3 -m venv venv
 ./venv/bin/python Digilogic.py
 ```
 
-En Windows, cambia `./venv/bin/` por `venv\Scripts\`.
+On Windows, replace `./venv/bin/` with `venv\Scripts\`.
 
-La primera vez, pulsa sobre el título ("Selecciona una carpeta") para
-elegir dónde tienes tus MP3.
+The first time, click the title ("Choose a folder") to point it at your
+MP3s.
 
-### Empaquetar
+### Packaging
 
-- **macOS**: `./venv/bin/python setup.py py2app` → `dist/Digilogic.app`.
-- **Windows**: `venv\Scripts\python construir_windows.py` → `dist\Digilogic.exe`.
+- **macOS**: `./venv/bin/python setup.py py2app` → `dist/Digilogic.app`
+- **Windows**: `venv\Scripts\python construir_windows.py` → `dist\Digilogic.exe`
 
-Cada sistema empaqueta solo desde sí mismo: el `.app` se genera en un Mac y
-el `.exe` en un Windows.
+Each system can only package for itself: the `.app` is built on a Mac and
+the `.exe` on Windows.
 
-## Cómo se usa
+## How to use it
 
-| Acción | Cómo |
+| Action | How |
 |---|---|
-| Elegir carpeta de música | Pulsar sobre el título |
-| Entrar o salir del modo compacto | Pulsar sobre la nota o la portada |
-| Mover la ventana | Arrastrarla desde cualquier punto |
-| Ver la lista de canciones | Botón de las tres líneas |
-| Reproducir una canción | Doble clic en la lista |
-| Buscar en tu música | Escribir en la barra de arriba |
+| Choose your music folder | Click the title, or drop a folder on the window |
+| Enter or leave mini mode | Click the note or the album art |
+| Move the window | Drag it from anywhere |
+| See the track list | The three-line button |
+| Play a track | Double-click it in the list |
+| Search your music | Type in the bar at the top |
 
-## Estructura
+## Layout
 
-- `Digilogic.py` — punto de entrada.
-- `reproductor.py` — todo el reproductor: interfaz, animaciones y lógica.
-- `setup.py` — empaquetado para macOS (py2app).
-- `construir_windows.py` — empaquetado para Windows (PyInstaller).
+- `Digilogic.py` — entry point.
+- `reproductor.py` — the whole player: interface, animations and logic.
+- `setup.py` — macOS packaging (py2app).
+- `construir_windows.py` — Windows packaging (PyInstaller).
 - `Nota-musica.svg`, `icono aleatorio.png`, `icono lista.png`,
-  `Digilogic.ico` — recursos gráficos que la aplicación carga en tiempo de
-  ejecución.
+  `Digilogic.ico` — graphics the app loads at runtime.
 
-## Licencia
+The code and its comments are written in Spanish, which is the author's
+language. The interface and this README are in English.
 
-MIT. Ver [LICENSE](LICENSE).
+## Licence
+
+MIT. See [LICENSE](LICENSE).
