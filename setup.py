@@ -14,7 +14,7 @@ OPTIONS = {
     'includes': ['objc', 'Foundation', 'MediaPlayer'],
     # Todo lo que 'ruta_recurso' busque en tiempo de ejecución tiene que
     # estar aquí, o dentro del .app el icono no se encontraría.
-    'resources': ['Nota-musica.svg', 'icono aleatorio.png'],
+    'resources': ['Nota-musica.svg', 'icono aleatorio.png', 'icono lista.png'],
     'iconfile': 'Digilogic.icns',
     'plist': {
         'CFBundleName': 'Digilogic',
