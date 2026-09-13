@@ -32,6 +32,7 @@ import sys
 RECURSOS = [
     "Nota-musica.svg",
     "icono aleatorio.png",
+    "icono lista.png",
     # Icono de la ventana y la barra de tareas (Digilogic.py lo carga al
     # arrancar). El de "--icon" solo marca el archivo .exe en el Explorador.
     "Digilogic.ico",

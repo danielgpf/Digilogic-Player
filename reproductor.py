@@ -77,6 +77,7 @@ except ImportError:
 # usa el reproductor web de la Raspberry Pi, para que las dos aplicaciones
 # se vean como una sola familia.
 ARCHIVO_ICONO_ALEATORIO = "icono aleatorio.png"
+ARCHIVO_ICONO_LISTA = "icono lista.png"
 
 # Iconos ya teñidos y escalados, cacheados por (archivo, lado, color).
 # El teñido implica crear y pintar dos QPixmap, y paintEvent se ejecuta
@@ -980,16 +981,34 @@ class BotonLista(QPushButton):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        pluma = QPen(QColor(255, 255, 255, 235), max(1.3, self.tamano * 0.06))
-        pluma.setCapStyle(Qt.PenCapStyle.RoundCap)
-        painter.setPen(pluma)
+        escala = self.devicePixelRatioF()
+        icono = icono_tenido(
+            ARCHIVO_ICONO_LISTA, round(self.tamano * 0.56),
+            QColor(255, 255, 255, 235), escala,
+        )
+        if icono.isNull():
+            # Sin el archivo, tres rayas dibujadas a mano. Es el mismo
+            # símbolo de siempre y evita que el botón se quede vacío si
+            # el icono no viaja dentro del paquete.
+            pluma = QPen(QColor(255, 255, 255, 235), max(1.3, self.tamano * 0.06))
+            pluma.setCapStyle(Qt.PenCapStyle.RoundCap)
+            painter.setPen(pluma)
 
-        w, h = self.width(), self.height()
-        margen_x = w * 0.28
-        centro_y = h / 2
-        separacion = h * 0.15
-        for y in (centro_y - separacion, centro_y, centro_y + separacion):
-            painter.drawLine(QPointF(margen_x, y), QPointF(w - margen_x, y))
+            w, h = self.width(), self.height()
+            margen_x = w * 0.28
+            centro_y = h / 2
+            separacion = h * 0.15
+            for y in (centro_y - separacion, centro_y, centro_y + separacion):
+                painter.drawLine(QPointF(margen_x, y), QPointF(w - margen_x, y))
+            return
+
+        # El pixmap tiene más píxeles que su tamaño en pantalla (Retina),
+        # así que hay que centrarlo por su medida lógica, no por la real.
+        ancho = icono.width() / escala
+        alto = icono.height() / escala
+        painter.drawPixmap(
+            QPointF((self.width() - ancho) / 2, (self.height() - alto) / 2), icono
+        )
 
 
 # ------------------------------------------------------------------
@@ -1708,7 +1727,13 @@ ANCHO_TARJETA = 300
 # La tarjeta se ajusta a lo que ocupa su contenido: si sobra alto, Qt lo
 # reparte entre las filas y aparecen franjas vacías en vez de un diseño
 # compacto. Si añades o quitas filas, recalcula este número.
-ALTO_TARJETA = 369
+ALTO_TARJETA = 361
+
+# Alto de la fila con el minuto actual y la duración. Si se cambia, hay
+# que mover ALTO_TARJETA en la misma cantidad: las filas suman justo el
+# alto de la tarjeta, así que un píxel que se quite aquí y no se quite
+# allí reaparece como hueco en otra fila.
+ALTO_FILA_TIEMPOS = 16
 # Margen superior del layout y alto de la fila del semáforo en macOS. En
 # Windows esa fila la sustituye la barra de título, que ocupa unos
 # píxeles más: se suman a la tarjeta para que el resto no se apriete.
@@ -2271,6 +2296,12 @@ class Reproductor(QWidget):
         self.slider_progreso.sliderReleased.connect(self.al_soltar_arrastre)
 
         self.fila_tiempos = QWidget()
+        # Sin alto fijo esta fila reclamaba 24 px para dos textos que solo
+        # piden 13, y esos 11 px de más salían como una franja vacía entre
+        # la barra de progreso y los controles. Se ata a 16: lo justo para
+        # el texto, con un par de píxeles de holgura porque las fuentes de
+        # Windows piden algo más de alto que las de macOS.
+        self.fila_tiempos.setFixedHeight(ALTO_FILA_TIEMPOS)
         fila_tiempos = QHBoxLayout(self.fila_tiempos)
         fila_tiempos.setContentsMargins(0, 0, 0, 0)
         self.label_tiempo_actual = QLabel("0:00")
