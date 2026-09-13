@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import (
     Qt, QUrl, QTimer, QRect, QRectF, QPointF, QSize, QEvent, QSettings,
-    pyqtSignal, QPropertyAnimation, QEasingCurve, QVariantAnimation
+    QLocale, pyqtSignal, QPropertyAnimation, QEasingCurve, QVariantAnimation
 )
 from PyQt6.QtGui import (
     QPixmap, QPainter, QPainterPath, QPainterPathStroker, QColor, QFont,
@@ -1777,7 +1777,131 @@ UMBRAL_REBOBINAR_MS = 10_000
 # Textos del campo de búsqueda. Cambian con el modo porque son la pista
 # principal de qué va a pasar al escribir: filtrar lo que ya tienes o
 # descargar algo nuevo.
-TEXTO_BUSCAR_LOCAL = "Buscar en tu música…"
+# ------------------------------------------------------------------
+# Idioma de la interfaz
+# ------------------------------------------------------------------
+#
+# Digilogic tiene cuatro frases y ningún menú de idiomas: coge el del
+# sistema al arrancar y se acabó. Un selector de idioma sería un control
+# más en una ventana que se quiere mínima, y además nadie lo usaría —
+# quien tiene el Mac en alemán quiere la app en alemán, no quiere
+# elegirla.
+#
+# Si el sistema está en un idioma que no está aquí, se usa el inglés,
+# que es el que más gente entiende.
+#
+# No hay árabe ni hebreo a propósito: se escriben de derecha a izquierda
+# y eso obliga a dar la vuelta a toda la interfaz, que está dibujada a
+# mano. Traducir las frases sin girar el diseño quedaría peor que
+# dejarlo en inglés.
+
+IDIOMAS = {
+    "en": {
+        "elige_carpeta": "Choose a folder",
+        "buscar": "Search your music…",
+        "dialogo_carpeta": "Choose the folder with your MP3s (it can be a USB drive)",
+        "sin_mp3": "No MP3s found",
+    },
+    "es": {
+        "elige_carpeta": "Selecciona una carpeta",
+        "buscar": "Buscar en tu música…",
+        "dialogo_carpeta": "Selecciona la carpeta con tus MP3 (puede ser tu USB)",
+        "sin_mp3": "No se encontraron MP3",
+    },
+    "pt": {
+        "elige_carpeta": "Escolhe uma pasta",
+        "buscar": "Procurar na tua música…",
+        "dialogo_carpeta": "Escolhe a pasta com os teus MP3 (pode ser uma unidade USB)",
+        "sin_mp3": "Nenhum MP3 encontrado",
+    },
+    "fr": {
+        "elige_carpeta": "Choisir un dossier",
+        "buscar": "Rechercher dans votre musique…",
+        "dialogo_carpeta": "Choisissez le dossier contenant vos MP3 (ce peut être une clé USB)",
+        "sin_mp3": "Aucun MP3 trouvé",
+    },
+    "de": {
+        "elige_carpeta": "Ordner auswählen",
+        "buscar": "Deine Musik durchsuchen…",
+        "dialogo_carpeta": "Wähle den Ordner mit deinen MP3s (auch ein USB-Stick)",
+        "sin_mp3": "Keine MP3s gefunden",
+    },
+    "it": {
+        "elige_carpeta": "Scegli una cartella",
+        "buscar": "Cerca nella tua musica…",
+        "dialogo_carpeta": "Scegli la cartella con i tuoi MP3 (può essere una chiavetta USB)",
+        "sin_mp3": "Nessun MP3 trovato",
+    },
+    "nl": {
+        "elige_carpeta": "Kies een map",
+        "buscar": "Zoek in je muziek…",
+        "dialogo_carpeta": "Kies de map met je MP3's (dit kan een USB-stick zijn)",
+        "sin_mp3": "Geen MP3's gevonden",
+    },
+    "pl": {
+        "elige_carpeta": "Wybierz folder",
+        "buscar": "Szukaj w swojej muzyce…",
+        "dialogo_carpeta": "Wybierz folder z plikami MP3 (może to być pendrive)",
+        "sin_mp3": "Nie znaleziono plików MP3",
+    },
+    "tr": {
+        "elige_carpeta": "Bir klasör seç",
+        "buscar": "Müziğinde ara…",
+        "dialogo_carpeta": "MP3'lerinin bulunduğu klasörü seç (USB bellek de olabilir)",
+        "sin_mp3": "MP3 bulunamadı",
+    },
+    "ru": {
+        "elige_carpeta": "Выберите папку",
+        "buscar": "Поиск в вашей музыке…",
+        "dialogo_carpeta": "Выберите папку с файлами MP3 (можно USB-накопитель)",
+        "sin_mp3": "Файлы MP3 не найдены",
+    },
+    "hi": {
+        "elige_carpeta": "फ़ोल्डर चुनें",
+        "buscar": "अपना संगीत खोजें…",
+        "dialogo_carpeta": "अपने MP3 वाला फ़ोल्डर चुनें (USB ड्राइव भी चल सकती है)",
+        "sin_mp3": "कोई MP3 नहीं मिला",
+    },
+    "zh": {
+        "elige_carpeta": "选择文件夹",
+        "buscar": "搜索你的音乐…",
+        "dialogo_carpeta": "选择存放 MP3 的文件夹（可以是 U 盘）",
+        "sin_mp3": "未找到 MP3 文件",
+    },
+    "ja": {
+        "elige_carpeta": "フォルダを選択",
+        "buscar": "音楽を検索…",
+        "dialogo_carpeta": "MP3 の入ったフォルダを選択（USB メモリでも可）",
+        "sin_mp3": "MP3 が見つかりません",
+    },
+    "ko": {
+        "elige_carpeta": "폴더 선택",
+        "buscar": "음악 검색…",
+        "dialogo_carpeta": "MP3가 있는 폴더를 선택하세요 (USB도 가능)",
+        "sin_mp3": "MP3를 찾을 수 없습니다",
+    },
+}
+
+
+def _idioma_del_sistema():
+    """Código del idioma de la interfaz, o 'en' si no lo tenemos.
+
+    Se mira 'uiLanguages' y no solo el nombre del locale porque son cosas
+    distintas: un Mac puede estar en inglés con formatos de España, y lo
+    que importa es en qué idioma quiere leer la persona, no cómo escribe
+    las fechas.
+    """
+    candidatos = list(QLocale.system().uiLanguages()) + [QLocale.system().name()]
+    for etiqueta in candidatos:
+        codigo = etiqueta.replace("_", "-").split("-")[0].lower()
+        if codigo in IDIOMAS:
+            return codigo
+    return "en"
+
+
+TEXTOS = IDIOMAS[_idioma_del_sistema()]
+
+TEXTO_BUSCAR_LOCAL = TEXTOS["buscar"]
 
 # Ajustes que sobreviven al cierre de la app. En macOS, QSettings los
 # guarda en ~/Library/Preferences/com.digilogic.Digilogic.plist.
@@ -2135,7 +2259,7 @@ class Reproductor(QWidget):
         self.contenedor_superior.setFixedHeight(ALTO_ZONA_SUPERIOR)
 
         # --- Título (con marquesina al reproducir) y botón de elegir carpeta a la vez ---
-        self.label_titulo = TituloAnimado("Selecciona una carpeta")
+        self.label_titulo = TituloAnimado(TEXTOS["elige_carpeta"])
         self.label_titulo.clicked.connect(self.elegir_carpeta)
 
         # --- Progreso ---
@@ -2626,7 +2750,7 @@ class Reproductor(QWidget):
 
     def elegir_carpeta(self):
         carpeta = QFileDialog.getExistingDirectory(
-            self, "Selecciona la carpeta con tus MP3 (puede ser tu USB)"
+            self, TEXTOS["dialogo_carpeta"]
         )
         if not carpeta:
             return
@@ -2673,7 +2797,7 @@ class Reproductor(QWidget):
             self._filas_canciones.append(fila)
 
         if not self.canciones:
-            self.label_titulo.establecer_texto("No se encontraron MP3")
+            self.label_titulo.establecer_texto(TEXTOS["sin_mp3"])
             return
 
         if ruta_reproduciendo_antes and ruta_reproduciendo_antes in self.canciones:
