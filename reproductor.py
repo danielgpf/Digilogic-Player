@@ -37,7 +37,9 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtSvg import QSvgRenderer
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput, QAudioDecoder, QAudioFormat
-from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
+from PyQt6.QtNetwork import (
+    QNetworkAccessManager, QNetworkReply, QNetworkRequest, QSslSocket
+)
 
 try:
     import mutagen
@@ -3200,6 +3202,7 @@ IDIOMAS = {
         "en_directo": "LIVE",
         "sin_emisoras": "No stations found",
         "sin_conexion": "No connection",
+        "radio_no_disponible": "Radio unavailable on this system",
         "estadisticas": "Statistics",
         "tiempo_escuchado": "Time listened",
         "canciones_reproducidas": "Songs played",
@@ -3233,6 +3236,7 @@ IDIOMAS = {
         "en_directo": "EN DIRECTO",
         "sin_emisoras": "No se encontraron emisoras",
         "sin_conexion": "Sin conexión",
+        "radio_no_disponible": "Radio no disponible en este equipo",
         "estadisticas": "Estadísticas",
         "tiempo_escuchado": "Tiempo escuchado",
         "canciones_reproducidas": "Canciones reproducidas",
@@ -3266,6 +3270,7 @@ IDIOMAS = {
         "en_directo": "EM DIRETO",
         "sin_emisoras": "Nenhuma estação encontrada",
         "sin_conexion": "Sem ligação",
+        "radio_no_disponible": "Rádio indisponível neste equipamento",
         "estadisticas": "Estatísticas",
         "tiempo_escuchado": "Tempo ouvido",
         "canciones_reproducidas": "Músicas reproduzidas",
@@ -3299,6 +3304,7 @@ IDIOMAS = {
         "en_directo": "EN DIRECT",
         "sin_emisoras": "Aucune station trouvée",
         "sin_conexion": "Pas de connexion",
+        "radio_no_disponible": "Radio indisponible sur cet appareil",
         "estadisticas": "Statistiques",
         "tiempo_escuchado": "Temps d'écoute",
         "canciones_reproducidas": "Morceaux écoutés",
@@ -3332,6 +3338,7 @@ IDIOMAS = {
         "en_directo": "LIVE",
         "sin_emisoras": "Keine Sender gefunden",
         "sin_conexion": "Keine Verbindung",
+        "radio_no_disponible": "Radio auf diesem Gerät nicht verfügbar",
         "estadisticas": "Statistiken",
         "tiempo_escuchado": "Hörzeit",
         "canciones_reproducidas": "Gespielte Titel",
@@ -3365,6 +3372,7 @@ IDIOMAS = {
         "en_directo": "IN DIRETTA",
         "sin_emisoras": "Nessuna stazione trovata",
         "sin_conexion": "Nessuna connessione",
+        "radio_no_disponible": "Radio non disponibile su questo dispositivo",
         "estadisticas": "Statistiche",
         "tiempo_escuchado": "Tempo di ascolto",
         "canciones_reproducidas": "Brani riprodotti",
@@ -3398,6 +3406,7 @@ IDIOMAS = {
         "en_directo": "LIVE",
         "sin_emisoras": "Geen zenders gevonden",
         "sin_conexion": "Geen verbinding",
+        "radio_no_disponible": "Radio niet beschikbaar op dit apparaat",
         "estadisticas": "Statistieken",
         "tiempo_escuchado": "Luistertijd",
         "canciones_reproducidas": "Afgespeelde nummers",
@@ -3431,6 +3440,7 @@ IDIOMAS = {
         "en_directo": "NA ŻYWO",
         "sin_emisoras": "Nie znaleziono stacji",
         "sin_conexion": "Brak połączenia",
+        "radio_no_disponible": "Radio niedostępne na tym urządzeniu",
         "estadisticas": "Statystyki",
         "tiempo_escuchado": "Czas słuchania",
         "canciones_reproducidas": "Odtworzone utwory",
@@ -3464,6 +3474,7 @@ IDIOMAS = {
         "en_directo": "CANLI",
         "sin_emisoras": "İstasyon bulunamadı",
         "sin_conexion": "Bağlantı yok",
+        "radio_no_disponible": "Bu cihazda radyo kullanılamıyor",
         "estadisticas": "İstatistikler",
         "tiempo_escuchado": "Dinlenen süre",
         "canciones_reproducidas": "Çalınan şarkılar",
@@ -3497,6 +3508,7 @@ IDIOMAS = {
         "en_directo": "В ЭФИРЕ",
         "sin_emisoras": "Станции не найдены",
         "sin_conexion": "Нет подключения",
+        "radio_no_disponible": "Радио недоступно на этом устройстве",
         "estadisticas": "Статистика",
         "tiempo_escuchado": "Время прослушивания",
         "canciones_reproducidas": "Прослушано треков",
@@ -3530,6 +3542,7 @@ IDIOMAS = {
         "en_directo": "लाइव",
         "sin_emisoras": "कोई स्टेशन नहीं मिला",
         "sin_conexion": "कनेक्शन नहीं",
+        "radio_no_disponible": "इस डिवाइस पर रेडियो उपलब्ध नहीं",
         "estadisticas": "आंकड़े",
         "tiempo_escuchado": "सुनने का समय",
         "canciones_reproducidas": "चलाए गए गाने",
@@ -3563,6 +3576,7 @@ IDIOMAS = {
         "en_directo": "直播",
         "sin_emisoras": "未找到电台",
         "sin_conexion": "无网络连接",
+        "radio_no_disponible": "此设备无法使用广播",
         "estadisticas": "统计",
         "tiempo_escuchado": "收听时长",
         "canciones_reproducidas": "播放歌曲数",
@@ -3596,6 +3610,7 @@ IDIOMAS = {
         "en_directo": "ライブ",
         "sin_emisoras": "放送局が見つかりません",
         "sin_conexion": "接続がありません",
+        "radio_no_disponible": "この端末ではラジオを利用できません",
         "estadisticas": "統計",
         "tiempo_escuchado": "再生時間",
         "canciones_reproducidas": "再生した曲数",
@@ -3629,6 +3644,7 @@ IDIOMAS = {
         "en_directo": "라이브",
         "sin_emisoras": "방송국을 찾을 수 없습니다",
         "sin_conexion": "연결 없음",
+        "radio_no_disponible": "이 기기에서는 라디오를 사용할 수 없습니다",
         "estadisticas": "통계",
         "tiempo_escuchado": "감상 시간",
         "canciones_reproducidas": "재생한 곡",
@@ -3951,6 +3967,66 @@ class AnalizadorOnda(QObject):
         return [min(1.0, valor / referencia) for valor in envolvente]
 
 
+# Se resuelve una sola vez, la primera que se pregunta. Guardarlo no es
+# por ahorrar: es que la respuesta deja de poder cambiar en cuanto Qt
+# fija el motor, así que preguntar dos veces daría lo mismo igualmente.
+_hay_cifrado = None
+
+
+def openssl_al_alcance():
+    """Si las bibliotecas de OpenSSL están donde Windows pueda cargarlas.
+
+    Solo se pregunta en Windows. Fuera de ahí devuelve True porque la
+    respuesta no se usa para nada: en macOS el .app las lleva dentro.
+    """
+    if sys.platform != "win32":
+        return True
+    import ctypes
+    # Los nombres con los que Qt las busca, de la versión más nueva a la
+    # más vieja. Con que cargue una, OpenSSL va a funcionar.
+    for nombre in ("libssl-3-x64.dll", "libssl-3.dll", "libssl-1_1-x64.dll"):
+        try:
+            ctypes.WinDLL(nombre)
+            return True
+        except OSError:
+            continue
+    return False
+
+
+def asegurar_tls():
+    """Deja activo un motor de cifrado que de verdad funcione.
+
+    Importa por la radio, que pide las emisoras por HTTPS. Qt trae varios
+    motores y elige uno al arrancar; el problema es la aplicación
+    empaquetada para Windows, donde viaja el conector de OpenSSL pero no
+    las bibliotecas de OpenSSL, porque PyQt no las distribuye. Qt se
+    queda con un motor incapaz de cifrar y la radio falla como si no
+    hubiera internet, sin más explicación y solo dentro del .exe.
+
+    Ahí se pasa a 'schannel', el cifrado del propio Windows, que no
+    necesita nada al lado. Pero solo ahí: cambiar de motor por si acaso
+    es peligroso, y está comprobado. En macOS, forzar el motor de Apple
+    en lugar del que Qt elige deja la radio sin responder, porque
+    SecureTransport está abandonado desde hace años. Por eso esto no
+    toca nada mientras el camino de siempre pueda funcionar.
+
+    OJO: hay que llamarla al arrancar, antes de que nadie toque la red.
+    En cuanto se usa el cifrado por primera vez -y basta con preguntar
+    'supportsSsl()'- Qt fija el motor y ya no admite cambios. De ahí que
+    se mire si OpenSSL está presente en vez de probar si funciona:
+    probarlo ya sería tarde para cambiar de idea.
+    """
+    global _hay_cifrado
+    if _hay_cifrado is not None:
+        return _hay_cifrado
+
+    if not openssl_al_alcance() and "schannel" in QSslSocket.availableBackends():
+        if QSslSocket.activeBackend() != "schannel":
+            QSslSocket.setActiveBackend("schannel")
+    _hay_cifrado = QSslSocket.supportsSsl()
+    return _hay_cifrado
+
+
 class ClienteRadio(QObject):
     """Busca emisoras en Radio Browser (https://api.radio-browser.info).
 
@@ -3974,9 +4050,13 @@ class ClienteRadio(QObject):
 
     resultados = pyqtSignal(list)
     fallo = pyqtSignal()
+    # El equipo no sabe cifrar: no es culpa de la conexión de nadie y no
+    # sirve de nada reintentar, así que va por su propia señal.
+    sin_cifrado = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.hay_tls = asegurar_tls()
         self.red = QNetworkAccessManager(self)
         self.respuesta_en_curso = None
         # Para saber si una lista vacía viene de haber filtrado por país,
@@ -4025,6 +4105,12 @@ class ClienteRadio(QObject):
 
     def _pedir(self, camino):
         self.cancelar()
+        if not self.hay_tls:
+            # Sin cifrado la petición saldría y volvería con un error de
+            # red corriente, y el usuario leería "sin conexión" mientras
+            # el resto de su internet funciona perfectamente.
+            self.sin_cifrado.emit()
+            return
         separador = "&" if "?" in camino else "?"
         peticion = QNetworkRequest(
             QUrl(f"{self.SERVIDOR}/json/{camino}{separador}hidebroken=true")
@@ -4439,6 +4525,7 @@ class Reproductor(QWidget):
         self.cliente_radio = ClienteRadio(self)
         self.cliente_radio.resultados.connect(self._al_llegar_emisoras)
         self.cliente_radio.fallo.connect(self._al_fallar_radio)
+        self.cliente_radio.sin_cifrado.connect(self._al_faltar_cifrado)
 
         # Para que las teclas sueltas (espacio, flechas) lleguen a la
         # ventana en vez de perderse. Los botones se quedan sin foco más
@@ -6146,6 +6233,15 @@ class Reproductor(QWidget):
         self.lista_emisoras.clear()
         self._poner_aviso_radio(TEXTOS["sin_conexion"])
 
+    def _al_faltar_cifrado(self):
+        """El equipo no sabe cifrar y la radio va por HTTPS. Decirlo tal
+        cual: culpar a la conexión mandaría al usuario a mirar su router
+        durante media hora para nada."""
+        self.emisoras = []
+        self._filas_emisoras = []
+        self.lista_emisoras.clear()
+        self._poner_aviso_radio(TEXTOS["radio_no_disponible"])
+
     def _poner_aviso_radio(self, texto):
         item = QListWidgetItem()
         item.setSizeHint(QSize(0, ALTO_FILA_CANCION))
@@ -6627,6 +6723,7 @@ class Reproductor(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    asegurar_tls()   # ver el porqué en la propia función
     ventana = Reproductor()
     ventana.show()
     sys.exit(app.exec())
