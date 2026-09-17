@@ -28,7 +28,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import (
     Qt, QUrl, QTimer, QTime, QRect, QRectF, QPointF, QSize, QSettings,
     QLocale, pyqtSignal, QObject, QPropertyAnimation, QEasingCurve,
-    QVariantAnimation, QDate, QElapsedTimer
+    QVariantAnimation, QDate, QElapsedTimer, QFileSystemWatcher
 )
 from PyQt6.QtGui import (
     QPixmap, QPainter, QPainterPath, QPainterPathStroker, QColor, QFont,
@@ -255,6 +255,13 @@ EXTENSIONES_AUDIO = (
 
 def es_audio(nombre):
     return nombre.lower().endswith(EXTENSIONES_AUDIO)
+
+
+# Cuánto se espera, tras el último aviso de que la carpeta de música ha
+# cambiado, antes de releerla. Copiar un solo archivo ya dispara varios
+# avisos seguidos, y soltar un disco entero, decenas: releer con cada uno
+# sería reconstruir la lista una y otra vez para nada.
+ESPERA_REFRESCO_CARPETA_MS = 800
 
 
 def _imagen_o_nada(datos):
@@ -4431,6 +4438,18 @@ class Reproductor(QWidget):
         # rehaga el camino en lugar de sortear una nueva, igual que las
         # flechas atrás/adelante de un navegador.
         self.pila_siguientes = []
+        # Vigila la carpeta elegida: si se le añade o quita una canción
+        # con la app abierta, la lista se pone al día sola en vez de
+        # obligar a volver a elegir la misma carpeta. Lo que había en
+        # ella la última vez que se leyó se guarda aparte para saber si
+        # lo que cambió fue la música o cualquier otro archivo.
+        self._archivos_carpeta = []
+        self.vigilante_carpeta = QFileSystemWatcher(self)
+        self.vigilante_carpeta.directoryChanged.connect(self._al_cambiar_carpeta_en_disco)
+        self._temporizador_refresco_carpeta = QTimer(self)
+        self._temporizador_refresco_carpeta.setSingleShot(True)
+        self._temporizador_refresco_carpeta.setInterval(ESPERA_REFRESCO_CARPETA_MS)
+        self._temporizador_refresco_carpeta.timeout.connect(self._refrescar_carpeta)
         self._arrastrando_slider = False
         self._posicion_click = None
         self.modo_compacto = False
@@ -5265,11 +5284,9 @@ class Reproductor(QWidget):
         if getattr(self, "canciones", None) and 0 <= getattr(self, "indice_actual", -1) < len(self.canciones):
             ruta_reproduciendo_antes = self.canciones[self.indice_actual]
 
-        self.canciones = [
-            os.path.join(carpeta, f)
-            for f in sorted(os.listdir(carpeta))
-            if es_audio(f)
-        ]
+        self.canciones = self._leer_canciones_de(carpeta)
+        self._archivos_carpeta = list(self.canciones)
+        self._vigilar_carpeta(carpeta)
 
         # El historial guarda posiciones dentro de 'canciones', y esa lista
         # acaba de cambiar: conservarlo apuntaría a canciones equivocadas.
@@ -5296,6 +5313,114 @@ class Reproductor(QWidget):
         else:
             self.indice_actual = 0
             self.cargar_cancion(self.indice_actual, reproducir=False)
+
+    @staticmethod
+    def _leer_canciones_de(carpeta):
+        """Las rutas de la música que hay en la carpeta, en orden."""
+        return [
+            os.path.join(carpeta, f)
+            for f in sorted(os.listdir(carpeta))
+            if es_audio(f)
+        ]
+
+    def _vigilar_carpeta(self, carpeta):
+        """Deja al vigilante mirando solo esta carpeta."""
+        anteriores = self.vigilante_carpeta.directories()
+        if anteriores:
+            self.vigilante_carpeta.removePaths(anteriores)
+        self.vigilante_carpeta.addPath(carpeta)
+
+    def _al_cambiar_carpeta_en_disco(self, _ruta):
+        # Se espera a que amaine: ver ESPERA_REFRESCO_CARPETA_MS.
+        self._temporizador_refresco_carpeta.start()
+
+    def _refrescar_carpeta(self):
+        """La carpeta ha cambiado en disco: se relee y, si lo que cambió
+        fue la música, la lista se pone al día sin cortar lo que suena."""
+        carpeta = self.carpeta_actual
+        if not (carpeta and os.path.isdir(carpeta)):
+            return
+        try:
+            archivos = self._leer_canciones_de(carpeta)
+        except OSError:
+            return
+        if archivos == self._archivos_carpeta:
+            return  # cambió otra cosa: una carátula, un .txt, una subcarpeta
+
+        # Hay que decidirlo ANTES de actualizar la foto de la carpeta: la
+        # cola es la carpeta si coincide con lo que había en ella, y si
+        # no es que se está escuchando una lista.
+        cola_era_la_carpeta = self.canciones == self._archivos_carpeta
+        self._archivos_carpeta = archivos
+
+        # La rejilla de listas se lee del disco cada vez que se pinta,
+        # así que basta con repintarla si es lo que se está viendo.
+        if self.stack_superior.currentIndex() == self.PANTALLA_LISTAS:
+            self._pintar_listas()
+
+        if cola_era_la_carpeta:
+            self._sustituir_cola(archivos)
+        # Y si no, la cola es de una lista y no se toca: "siguiente" debe
+        # seguir andando por la lista, no por la carpeta.
+
+    def _sustituir_cola(self, nuevas):
+        """Cambia la cola por 'nuevas' conservando todo lo que se pueda:
+        la canción cargada sigue cargada, el historial sigue apuntando a
+        las mismas canciones -aunque hayan cambiado de sitio- y el filtro
+        del buscador sigue aplicado."""
+        antes = self.canciones
+        ruta_actual = (
+            antes[self.indice_actual]
+            if 0 <= self.indice_actual < len(antes) else None
+        )
+
+        # El historial guarda posiciones, y la lista se ha reordenado: se
+        # traducen a través de las rutas, tirando las que ya no existen.
+        posicion_nueva = {ruta: i for i, ruta in enumerate(nuevas)}
+
+        def remapear(indices):
+            return [
+                posicion_nueva[antes[i]]
+                for i in indices
+                if 0 <= i < len(antes) and antes[i] in posicion_nueva
+            ]
+
+        self.historial = remapear(self.historial)
+        self.pila_siguientes = remapear(self.pila_siguientes)
+
+        self.canciones = nuevas
+        self._rellenar_lista_canciones()
+        self._filtrar_lista_canciones(self._filtro_del_buscador())
+
+        if not nuevas:
+            self.indice_actual = -1
+            self.label_titulo.establecer_texto(TEXTOS["sin_musica"])
+            return
+
+        if ruta_actual in posicion_nueva:
+            # Sigue estando: solo se vuelve a marcar en la lista nueva,
+            # sin recargarla en el reproductor, que cortaría el audio.
+            self.indice_actual = posicion_nueva[ruta_actual]
+            self.lista_canciones.setCurrentRow(self.indice_actual)
+            self._actualizar_indicadores_ecualizador()
+            return
+
+        # La canción cargada ya no está en la carpeta (o no había ninguna,
+        # porque la carpeta estaba vacía): se deja preparada la más
+        # cercana, sin que arranque sola.
+        self.indice_actual = min(max(self.indice_actual, 0), len(nuevas) - 1)
+        if self.emisora_actual is not None:
+            # En la radio no se carga nada: eso sacaría de la emisora.
+            self.lista_canciones.setCurrentRow(self.indice_actual)
+            return
+        self.cargar_cancion(self.indice_actual, reproducir=False)
+
+    def _filtro_del_buscador(self):
+        """Lo que hay escrito en el buscador, si está filtrando la lista.
+        En modo descarga el texto es una consulta a YouTube, no un filtro."""
+        if self.control_descargas is not None and self.control_descargas.modo_descarga:
+            return ""
+        return self.campo_busqueda.text()
 
     def _rellenar_lista_canciones(self):
         """Vuelca 'self.canciones' en la lista de la pantalla."""
