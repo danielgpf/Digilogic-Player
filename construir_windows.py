@@ -52,42 +52,34 @@ def comprobar_cifrado():
     saldría vacía dentro del .exe mientras funciona perfectamente al
     ejecutar el código a mano: de los fallos más difíciles de encontrar.
 
-    En Windows el conector que sirve es 'qschannelbackend', que usa el
-    cifrado del propio sistema. El de OpenSSL viaja también, pero sin las
-    bibliotecas de OpenSSL al lado -PyQt no las distribuye- no funciona;
-    de eso se encarga 'asegurar_tls' en el reproductor, que se pasa al
-    que sí sirva.
+    En Windows el reproductor usa siempre 'qschannelbackend', el cifrado
+    del propio sistema (ver 'asegurar_tls' en reproductor.py). El de
+    OpenSSL viaja también, pero no sirve de nada sin las bibliotecas de
+    OpenSSL al lado, y PyQt no las distribuye. Así que lo único que hay
+    que comprobar es que el de schannel esté.
     """
     from PyQt6.QtCore import QLibraryInfo
 
-    from reproductor import openssl_al_alcance
+    from reproductor import MOTOR_TLS_WINDOWS
 
     carpeta = os.path.join(
         QLibraryInfo.path(QLibraryInfo.LibraryPath.PluginsPath), "tls"
     )
     conectores = sorted(os.listdir(carpeta)) if os.path.isdir(carpeta) else []
-    utiles = [c for c in conectores if "certonly" not in c]
 
     print("Cifrado (hace falta para la radio):")
-    print("  conectores:", ", ".join(utiles) if utiles else "NINGUNO")
-    print("  bibliotecas de OpenSSL al alcance:", "sí" if openssl_al_alcance() else "no")
+    print("  conectores:", ", ".join(conectores) if conectores else "NINGUNO")
 
-    if not utiles:
-        print(
-            "\n  AVISO: sin conectores de cifrado. El .exe se generará igual,\n"
-            "  pero dentro de él la radio dirá 'Radio no disponible en este\n"
-            "  equipo'. Todo lo demás funcionará con normalidad.\n"
-        )
-        return False
+    if any(MOTOR_TLS_WINDOWS in c for c in conectores):
+        print("  -> hay %s, el cifrado del propio Windows: la radio irá.\n" % MOTOR_TLS_WINDOWS)
+        return True
 
-    if any("schannel" in c for c in utiles):
-        print("  -> hay schannel, el cifrado del propio Windows: la radio irá.\n")
-    else:
-        print(
-            "\n  AVISO: no está 'qschannelbackend.dll'. Si al abrir el .exe la\n"
-            "  radio dice que no está disponible, es esto.\n"
-        )
-    return True
+    print(
+        "\n  AVISO: no está 'q%sbackend.dll'. El .exe se generará igual,\n"
+        "  pero dentro de él la radio dirá 'Radio no disponible en este\n"
+        "  equipo'. Todo lo demás funcionará con normalidad.\n" % MOTOR_TLS_WINDOWS
+    )
+    return False
 
 
 def main():

@@ -3980,56 +3980,46 @@ class AnalizadorOnda(QObject):
 _hay_cifrado = None
 
 
-def openssl_al_alcance():
-    """Si las bibliotecas de OpenSSL están donde Windows pueda cargarlas.
-
-    Solo se pregunta en Windows. Fuera de ahí devuelve True porque la
-    respuesta no se usa para nada: en macOS el .app las lleva dentro.
-    """
-    if sys.platform != "win32":
-        return True
-    import ctypes
-    # Los nombres con los que Qt las busca, de la versión más nueva a la
-    # más vieja. Con que cargue una, OpenSSL va a funcionar.
-    for nombre in ("libssl-3-x64.dll", "libssl-3.dll", "libssl-1_1-x64.dll"):
-        try:
-            ctypes.WinDLL(nombre)
-            return True
-        except OSError:
-            continue
-    return False
+# El motor de cifrado que se usa en Windows. Es el del propio sistema:
+# viene con Windows, se actualiza con él y no necesita nada al lado.
+MOTOR_TLS_WINDOWS = "schannel"
 
 
 def asegurar_tls():
     """Deja activo un motor de cifrado que de verdad funcione.
 
     Importa por la radio, que pide las emisoras por HTTPS. Qt trae varios
-    motores y elige uno al arrancar; el problema es la aplicación
-    empaquetada para Windows, donde viaja el conector de OpenSSL pero no
-    las bibliotecas de OpenSSL, porque PyQt no las distribuye. Qt se
-    queda con un motor incapaz de cifrar y la radio falla como si no
-    hubiera internet, sin más explicación y solo dentro del .exe.
+    motores y elige uno al arrancar, normalmente el de OpenSSL. El
+    problema es la aplicación empaquetada para Windows: viaja el conector
+    de OpenSSL pero no las bibliotecas de OpenSSL, porque PyQt no las
+    distribuye. Qt se queda con un motor incapaz de cifrar y la radio
+    falla como si no hubiera internet, sin más explicación y solo dentro
+    del .exe.
 
-    Ahí se pasa a 'schannel', el cifrado del propio Windows, que no
-    necesita nada al lado. Pero solo ahí: cambiar de motor por si acaso
-    es peligroso, y está comprobado. En macOS, forzar el motor de Apple
-    en lugar del que Qt elige deja la radio sin responder, porque
-    SecureTransport está abandonado desde hace años. Por eso esto no
-    toca nada mientras el camino de siempre pueda funcionar.
+    En Windows se usa siempre 'schannel', el cifrado del propio sistema.
+    Siempre, y no solo cuando falta OpenSSL: mirar si hay un OpenSSL a
+    mano y usarlo si lo hay significaría depender de la biblioteca que
+    otro programa haya dejado en el PATH del usuario -la de Git, la de
+    una base de datos-, de la versión que sea y sin garantía de que el
+    conector de Qt se entienda con ella. El del sistema está en todos los
+    Windows y es el que se ha probado.
+
+    Solo en Windows: cambiar de motor por si acaso es peligroso, y está
+    comprobado. En macOS, forzar el motor de Apple en lugar del que Qt
+    elige deja la radio sin responder, porque SecureTransport está
+    abandonado desde hace años. Ahí no se toca nada.
 
     OJO: hay que llamarla al arrancar, antes de que nadie toque la red.
     En cuanto se usa el cifrado por primera vez -y basta con preguntar
-    'supportsSsl()'- Qt fija el motor y ya no admite cambios. De ahí que
-    se mire si OpenSSL está presente en vez de probar si funciona:
-    probarlo ya sería tarde para cambiar de idea.
+    'supportsSsl()'- Qt fija el motor y ya no admite cambios.
     """
     global _hay_cifrado
     if _hay_cifrado is not None:
         return _hay_cifrado
 
-    if not openssl_al_alcance() and "schannel" in QSslSocket.availableBackends():
-        if QSslSocket.activeBackend() != "schannel":
-            QSslSocket.setActiveBackend("schannel")
+    if sys.platform == "win32" and MOTOR_TLS_WINDOWS in QSslSocket.availableBackends():
+        if QSslSocket.activeBackend() != MOTOR_TLS_WINDOWS:
+            QSslSocket.setActiveBackend(MOTOR_TLS_WINDOWS)
     _hay_cifrado = QSslSocket.supportsSsl()
     return _hay_cifrado
 
