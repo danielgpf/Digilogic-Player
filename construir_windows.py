@@ -43,6 +43,53 @@ ICONO = "Digilogic.ico"
 ENTRADA = "Digilogic.py"
 
 
+def comprobar_cifrado():
+    """Avisa si el .exe va a salir sin poder hablar por HTTPS.
+
+    La radio pide las emisoras a un servidor por HTTPS, así que necesita
+    los conectores de cifrado de Qt (la carpeta de complementos 'tls').
+    PyInstaller los mete solo desde la versión 6, y si faltaran, la radio
+    saldría vacía dentro del .exe mientras funciona perfectamente al
+    ejecutar el código a mano: de los fallos más difíciles de encontrar.
+
+    En Windows el conector que sirve es 'qschannelbackend', que usa el
+    cifrado del propio sistema. El de OpenSSL viaja también, pero sin las
+    bibliotecas de OpenSSL al lado -PyQt no las distribuye- no funciona;
+    de eso se encarga 'asegurar_tls' en el reproductor, que se pasa al
+    que sí sirva.
+    """
+    from PyQt6.QtCore import QLibraryInfo
+
+    from reproductor import openssl_al_alcance
+
+    carpeta = os.path.join(
+        QLibraryInfo.path(QLibraryInfo.LibraryPath.PluginsPath), "tls"
+    )
+    conectores = sorted(os.listdir(carpeta)) if os.path.isdir(carpeta) else []
+    utiles = [c for c in conectores if "certonly" not in c]
+
+    print("Cifrado (hace falta para la radio):")
+    print("  conectores:", ", ".join(utiles) if utiles else "NINGUNO")
+    print("  bibliotecas de OpenSSL al alcance:", "sí" if openssl_al_alcance() else "no")
+
+    if not utiles:
+        print(
+            "\n  AVISO: sin conectores de cifrado. El .exe se generará igual,\n"
+            "  pero dentro de él la radio dirá 'Radio no disponible en este\n"
+            "  equipo'. Todo lo demás funcionará con normalidad.\n"
+        )
+        return False
+
+    if any("schannel" in c for c in utiles):
+        print("  -> hay schannel, el cifrado del propio Windows: la radio irá.\n")
+    else:
+        print(
+            "\n  AVISO: no está 'qschannelbackend.dll'. Si al abrir el .exe la\n"
+            "  radio dice que no está disponible, es esto.\n"
+        )
+    return True
+
+
 def main():
     if sys.platform != "win32":
         print(
@@ -57,6 +104,8 @@ def main():
         for f in faltan:
             print("  -", f)
         return 1
+
+    comprobar_cifrado()
 
     orden = [
         sys.executable, "-m", "PyInstaller",

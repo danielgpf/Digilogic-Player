@@ -5,7 +5,7 @@ import sys
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
 
-from reproductor import Reproductor, ruta_recurso
+from reproductor import Reproductor, asegurar_tls, ruta_recurso
 
 
 def _preparar_windows(app):
@@ -28,6 +28,9 @@ def _preparar_windows(app):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    # Antes de nada: Qt fija el motor de cifrado la primera vez que
+    # alguien lo usa, y en Windows el que elige solo puede no servir.
+    asegurar_tls()
     _preparar_windows(app)
     ventana = Reproductor()
     ventana.show()
