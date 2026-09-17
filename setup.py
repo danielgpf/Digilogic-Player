@@ -21,8 +21,8 @@ OPTIONS = {
         'CFBundleDisplayName': 'Digilogic',
         'CFBundleGetInfoString': "Reproductor MP3 Digilogic",
         'CFBundleIdentifier': "com.daniel.digilogic",
-        'CFBundleVersion': "1.0.2",
-        'CFBundleShortVersionString': "1.0.2",
+        'CFBundleVersion': "1.1.0",
+        'CFBundleShortVersionString': "1.1.0",
         'NSHumanReadableCopyright': "Daniel",
         # Lo marca Qt 6, que exige macOS 13.0 (el intérprete de python.org
         # con el que se compila para distribuir admite desde macOS 11).
