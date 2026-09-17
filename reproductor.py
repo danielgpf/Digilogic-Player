@@ -2015,14 +2015,19 @@ class TituloAnimado(QWidget):
         self.centrado = True
 
         self.setFixedHeight(22)
+        # Si hace de botón para elegir carpeta. Cuando no, el clic no
+        # hace nada aquí y sube a la tarjeta, que es la que mueve la
+        # ventana; y ni el cursor ni el brillo invitan a pulsar.
+        self.clicable = True
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
         self.fuente = QFont()
         self.fuente.setPointSize(13)
         self.fuente.setBold(True)
 
+        self.OPACIDAD_REPOSO = 0.78
         self.efecto_opacidad = QGraphicsOpacityEffect(self)
-        self.efecto_opacidad.setOpacity(0.78)
+        self.efecto_opacidad.setOpacity(self.OPACIDAD_REPOSO)
         self.setGraphicsEffect(self.efecto_opacidad)
         self.animacion_hover = QPropertyAnimation(self.efecto_opacidad, b"opacity")
         self.animacion_hover.setDuration(160)
@@ -2114,16 +2119,29 @@ class TituloAnimado(QWidget):
         self.animacion_hover.setEndValue(valor_final)
         self.animacion_hover.start()
 
+    def establecer_clicable(self, clicable):
+        if clicable == self.clicable:
+            return
+        self.clicable = clicable
+        self.setCursor(
+            Qt.CursorShape.PointingHandCursor if clicable else Qt.CursorShape.ArrowCursor
+        )
+        if not clicable:
+            # Puede que el ratón esté encima ahora mismo: se apaga el brillo.
+            self._animar_hacia(self.OPACIDAD_REPOSO)
+
     def enterEvent(self, event):
-        self._animar_hacia(1.0)
+        if self.clicable:
+            self._animar_hacia(1.0)
         super().enterEvent(event)
 
     def leaveEvent(self, event):
-        self._animar_hacia(0.78)
+        if self.clicable:
+            self._animar_hacia(self.OPACIDAD_REPOSO)
         super().leaveEvent(event)
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
+        if self.clicable and event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
         super().mousePressEvent(event)
 
@@ -4701,6 +4719,7 @@ class Reproductor(QWidget):
         # --- Título (con marquesina al reproducir) y botón de elegir carpeta a la vez ---
         self.label_titulo = TituloAnimado(TEXTOS["elige_carpeta"])
         self.label_titulo.clicked.connect(self.elegir_carpeta)
+        self._actualizar_titulo_clicable()
 
         # --- Progreso ---
         self.slider_progreso = SliderProgreso(Qt.Orientation.Horizontal)
@@ -4976,6 +4995,7 @@ class Reproductor(QWidget):
         foto_antes = self.tarjeta.grab()
 
         self.modo_compacto = not self.modo_compacto
+        self._actualizar_titulo_clicable()
 
         if self.modo_compacto:
             # Al encoger siempre se muestra la portada, nunca la lista.
@@ -5271,6 +5291,17 @@ class Reproductor(QWidget):
                 0 <= self.indice_actual < len(self.canciones) and \
                 self.canciones[self.indice_actual] == cancion:
             self._posicion_pendiente = posicion
+
+    def _actualizar_titulo_clicable(self):
+        """El título hace de botón de elegir carpeta solo cuando tiene
+        sentido: escuchando música y con la tarjeta grande. En la radio
+        no pinta nada. Y en el modo compacto tampoco, aunque suene
+        música: es una tarjeta pequeña que se agarra para moverla o para
+        agrandarla, y el título ocupa justo donde uno la coge; acababa
+        abriéndose el selector de carpetas sin querer."""
+        self.label_titulo.establecer_clicable(
+            not self.modo_compacto and self.emisora_actual is None
+        )
 
     def elegir_carpeta(self):
         carpeta = QFileDialog.getExistingDirectory(
@@ -6417,6 +6448,7 @@ class Reproductor(QWidget):
         self.analizador_onda.cancelar()
         self.portada.onda.establecer_envolvente([], AnalizadorOnda.RESOLUCION_MS)
         self.emisora_actual = emisora
+        self._actualizar_titulo_clicable()
         self.indice_emisora = indice
         self.player.setSource(QUrl(emisora["url"]))
         self.label_titulo.establecer_texto(emisora["nombre"])
@@ -6474,6 +6506,7 @@ class Reproductor(QWidget):
         """Volver a la música local: se llama desde cargar_cancion."""
         self.emisora_actual = None
         self.indice_emisora = -1
+        self._actualizar_titulo_clicable()
         self.portada.mostrar_nota()
         self._restaurar_fila_tiempos()
         self.label_tiempo_total.setText(formatear_tiempo(0))
