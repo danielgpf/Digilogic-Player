@@ -4196,6 +4196,24 @@ def formatear_duracion_larga(milisegundos):
     return f"{minutos} {TEXTOS['unidad_minutos']}"
 
 
+class FilaConCapa(QWidget):
+    """Un widget corriente con un hijo -la capa- que lo cubre entero,
+    siempre. Lo usa la fila de tiempos para el aviso de la radio: el
+    aviso no entra en el layout (ver dónde se crea) y por eso hay que
+    estirarlo a mano cada vez que la fila cambia de tamaño, que pasa al
+    entrar y salir del modo compacto. Sin esto se quedaba con el ancho
+    de la tarjeta grande y su centro caía a la derecha de la pequeña."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.capa = None
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self.capa is not None:
+            self.capa.setGeometry(self.rect())
+
+
 class FilaEstadistica(QWidget):
     """Un dato: el rotulo pequeño arriba y la cifra grande debajo."""
 
@@ -4692,7 +4710,7 @@ class Reproductor(QWidget):
         self.slider_progreso.sliderPressed.connect(self.al_empezar_arrastre)
         self.slider_progreso.sliderReleased.connect(self.al_soltar_arrastre)
 
-        self.fila_tiempos = QWidget()
+        self.fila_tiempos = FilaConCapa()
         # Sin alto fijo esta fila reclamaba 24 px para dos textos que solo
         # piden 13, y esos 11 px de más salían como una franja vacía entre
         # la barra de progreso y los controles. Se ata a 16: lo justo para
@@ -4716,10 +4734,8 @@ class Reproductor(QWidget):
         # ir centrado de verdad, no en el hueco que dejen los otros dos.
         self.label_estado_radio = QLabel(self.fila_tiempos)
         self.label_estado_radio.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.label_estado_radio.setStyleSheet(
-            "color: rgba(255,255,255,140); font-size: 11px; background: transparent;"
-        )
         self.label_estado_radio.hide()
+        self.fila_tiempos.capa = self.label_estado_radio
 
         # --- Controles: lista | anterior | play | siguiente | aleatorio ---
         self.contenedor_controles = QWidget()
@@ -4892,6 +4908,9 @@ class Reproductor(QWidget):
 
         for etiqueta in (self.label_tiempo_actual, self.label_tiempo_total):
             etiqueta.setStyleSheet("color: rgba(255,255,255,140); font-size: 11px;")
+        self.label_estado_radio.setStyleSheet(
+            "color: rgba(255,255,255,140); font-size: 11px; background: transparent;"
+        )
 
     def _montar_layout_compacto(self):
         """Tarjeta horizontal pequeña: miniatura a la izquierda, y a la
@@ -4936,6 +4955,11 @@ class Reproductor(QWidget):
 
         for etiqueta in (self.label_tiempo_actual, self.label_tiempo_total):
             etiqueta.setStyleSheet("color: rgba(255,255,255,130); font-size: 9px;")
+        # Un punto menos que en la tarjeta grande: en mayúsculas y a este
+        # tamaño, 11px pesaba demasiado sobre el botón de play.
+        self.label_estado_radio.setStyleSheet(
+            "color: rgba(255,255,255,130); font-size: 10px; background: transparent;"
+        )
 
     def alternar_modo_compacto(self):
         """Entra o sale del modo compacto. Se dispara al pulsar sobre la
@@ -6425,9 +6449,7 @@ class Reproductor(QWidget):
         # En mayúsculas, como los indicadores de emisión de cualquier
         # radio. En los idiomas que no distinguen caja no cambia nada.
         self.label_estado_radio.setText(texto.upper())
-        self.label_estado_radio.setGeometry(
-            0, 0, self.fila_tiempos.width(), self.fila_tiempos.height()
-        )
+        self.label_estado_radio.setGeometry(self.fila_tiempos.rect())
         self.label_estado_radio.show()
         self.label_estado_radio.raise_()
 
