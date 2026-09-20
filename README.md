@@ -72,6 +72,9 @@ land on a menu that slides in and out, the way a physical player would.
   is playing at that moment — not a loop that just happens to move.
 - **Plays most audio formats**: `mp3`, `m4a`, `aac`, `flac`, `wav`, `aiff`,
   `ogg`, `opus` and `wma`, reading the tags and the artwork from all of them.
+- **Keeps the list up to date on its own.** Copy a track into your folder
+  with the app open and it shows up; delete one and it goes. Whatever is
+  playing keeps playing.
 - **Drag a folder onto the window** to open it. Dropping a single track opens
   its folder and starts playing it.
 
