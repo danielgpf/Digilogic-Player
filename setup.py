@@ -12,6 +12,15 @@ OPTIONS = {
     # ellos y, ya empaquetado, se pierden las teclas de reproducción del
     # teclado y la ficha del Centro de Control.
     'includes': ['objc', 'Foundation', 'MediaPlayer'],
+    # Lo contrario: módulos que NO deben viajar dentro del .app aunque
+    # estén en la carpeta del proyecto. 'descargas' y 'portadas' son
+    # privados y no forman parte de Digilogic tal y como se publica;
+    # como 'reproductor.py' los importa dentro de un try/except, py2app
+    # los sigue igualmente y acababan metidos en el paquete, con lo que
+    # el .dmg salía con el botón de descargas de YouTube dentro. Sin
+    # ellos, el try falla, 'descargas' queda en None y la aplicación se
+    # comporta exactamente como la versión pública, que es lo suyo.
+    'excludes': ['descargas', 'portadas', 'yt_dlp'],
     # Todo lo que 'ruta_recurso' busque en tiempo de ejecución tiene que
     # estar aquí, o dentro del .app el icono no se encontraría.
     'resources': ['Nota-musica.svg', 'icono aleatorio.png', 'icono lista.png'],
